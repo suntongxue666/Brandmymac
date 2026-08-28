@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "BrandMyMac",
   description:
-    "Buy clickable ad space inside a Mac screen marketplace for product discovery.",
+    "Reserve fixed daily placements inside a Mac screen marketplace for product discovery.",
   openGraph: {
     title: "BrandMyMac",
     description:
@@ -23,8 +23,8 @@ export const metadata: Metadata = {
     images: ["/brandmymac_2560w.png"],
   },
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
   },
 };
 

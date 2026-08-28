@@ -32,12 +32,19 @@ test("server-renders the BrandMyMac screen marketplace", async () => {
 
   const html = await response.text();
   assert.match(html, /<title>BrandMyMac<\/title>/i);
-  assert.match(html, /Buy clickable ad space inside a Mac screen marketplace/i);
-  assert.match(html, /Own a spot on the most watched desktop\./);
+  assert.match(html, /Reserve fixed daily placements inside a Mac screen marketplace/i);
+  assert.match(html, /Your brand, on my Mac Screen/);
+  assert.match(html, /Contextual screen ads with fixed daily pricing/);
   assert.match(html, /src="\/brandmymac_2560w\.png"/);
-  assert.match(html, /Prime 1/);
-  assert.match(html, /Prime 3/);
+  assert.match(html, /Figma/);
+  assert.match(html, /Raycast/);
+  assert.match(html, /Prime 2/);
   assert.match(html, /Desktop 12/);
+  assert.match(html, /hover an empty slot to see placement terms/);
+  assert.match(html, /Reserve/);
+  assert.match(html, /User service agreement/);
+  assert.match(html, /User privacy policy/);
+  assert.match(html, /tiktreeapp@gmal\.com/);
   assert.equal((html.match(/class="ad-slot/g) || []).length, 15);
 });
 
@@ -48,8 +55,8 @@ test("server-renders the schedule page", async () => {
   const html = await response.text();
   assert.match(html, /Ad schedule/);
   assert.match(html, /Manual approval queue/);
-  assert.match(html, /No bookings yet/);
-  assert.match(html, /Back to screen/);
+  assert.match(html, /Private schedule/);
+  assert.match(html, /reserved for BrandMyMac operations/);
 });
 
 test("removes the starter preview surface", async () => {

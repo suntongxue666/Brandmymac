@@ -1,13 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 
 type Slot = {
   id: string;
   row: "hero" | "standard";
   label: string;
   price: number;
+  product?: {
+    name: string;
+    url: string;
+    schedule: string;
+  };
 };
 
 type Booking = {
@@ -17,8 +22,6 @@ type Booking = {
   productName: string;
   website: string;
   title: string;
-  description: string;
-  keywords: string;
   iconPreview: string;
   email: string;
   days: number;
@@ -26,43 +29,68 @@ type Booking = {
   total: number;
   status: "Pending payment";
   paypalLink: string;
+  currentSchedule: string;
+  requestedSchedule: string;
   createdAt: string;
 };
 
 const slots: Slot[] = [
-  ...Array.from({ length: 3 }, (_, index) => ({
-    id: `top-${index + 1}`,
-    row: "hero" as const,
-    label: `Prime ${index + 1}`,
-    price: 59,
-  })),
-  ...Array.from({ length: 12 }, (_, index) => ({
-    id: `desk-${index + 1}`,
-    row: "standard" as const,
-    label: `Desktop ${index + 1}`,
-    price: 24,
-  })),
+  {
+    id: "top-1",
+    row: "hero",
+    label: "Prime 1",
+    price: 75,
+    product: {
+      name: "Figma",
+      url: "https://figma.com",
+      schedule: "Aug 28, 2026 to Sep 3, 2026 (UTC)",
+    },
+  },
+  { id: "top-2", row: "hero", label: "Prime 2", price: 100 },
+  {
+    id: "top-3",
+    row: "hero",
+    label: "Prime 3",
+    price: 75,
+    product: {
+      name: "Raycast",
+      url: "https://raycast.com",
+      schedule: "Aug 28, 2026 to Sep 3, 2026 (UTC)",
+    },
+  },
+  { id: "desk-1", row: "standard", label: "Desktop 1", price: 10 },
+  { id: "desk-2", row: "standard", label: "Desktop 2", price: 10 },
+  { id: "desk-3", row: "standard", label: "Desktop 3", price: 20 },
+  { id: "desk-4", row: "standard", label: "Desktop 4", price: 20 },
+  { id: "desk-5", row: "standard", label: "Desktop 5", price: 10 },
+  { id: "desk-6", row: "standard", label: "Desktop 6", price: 10 },
+  { id: "desk-7", row: "standard", label: "Desktop 7", price: 5 },
+  { id: "desk-8", row: "standard", label: "Desktop 8", price: 5 },
+  { id: "desk-9", row: "standard", label: "Desktop 9", price: 10 },
+  { id: "desk-10", row: "standard", label: "Desktop 10", price: 10 },
+  { id: "desk-11", row: "standard", label: "Desktop 11", price: 5 },
+  { id: "desk-12", row: "standard", label: "Desktop 12", price: 5 },
 ];
 
-const sampleLogos = [
-  { name: "Figma", tone: "#242424", accent: "#ff7262" },
-  { name: "Linear", tone: "#1b1f2a", accent: "#5e6ad2" },
-  { name: "Raycast", tone: "#251d1d", accent: "#ff6363" },
-  { name: "Notion", tone: "#191919", accent: "#f7f4ed" },
-  { name: "Stripe", tone: "#252a5f", accent: "#635bff" },
-  { name: "Slack", tone: "#241a2f", accent: "#36c5f0" },
-  { name: "Framer", tone: "#101010", accent: "#8b5cf6" },
-  { name: "Arc", tone: "#14213d", accent: "#fca311" },
-  { name: "Loom", tone: "#111827", accent: "#625df5" },
-  { name: "Miro", tone: "#2a2200", accent: "#ffd02f" },
-  { name: "Cal", tone: "#111111", accent: "#ffffff" },
-  { name: "Super", tone: "#102a43", accent: "#38bdf8" },
-  { name: "Beehiiv", tone: "#2b1b00", accent: "#f9b233" },
-  { name: "Vercel", tone: "#111111", accent: "#f5f5f5" },
-  { name: "Tiny", tone: "#153426", accent: "#5ee192" },
-];
+const dayOptions = [3, 7];
 
-const dayOptions = [7, 14, 30, 60];
+function faviconUrl(url: string) {
+  try {
+    const domain = new URL(url).hostname;
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+  } catch {
+    return "";
+  }
+}
+
+function formatUtcDate(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
 
 function inferMetaFromUrl(url: string) {
   const normalized = url.startsWith("http") ? url : `https://${url}`;
@@ -79,17 +107,13 @@ function inferMetaFromUrl(url: string) {
     return {
       website: parsed.toString(),
       productName: brand,
-      title: `${brand} | Product workspace`,
-      description: `${brand} helps Mac users discover a useful product directly from the BrandMyMac screen marketplace.`,
-      keywords: `${brand.toLowerCase()}, mac app, startup, productivity`,
+      title: brand,
     };
   } catch {
     return {
       website: url,
       productName: "",
       title: "",
-      description: "",
-      keywords: "",
     };
   }
 }
@@ -110,18 +134,41 @@ export default function Home() {
     productName: "",
     website: "",
     title: "",
-    description: "",
-    keywords: "",
     email: "",
-    days: 14,
+    days: 3,
     iconPreview: "",
   });
   const [submitted, setSubmitted] = useState<Booking | null>(null);
+  const [hoveredSlot, setHoveredSlot] = useState<Slot | null>(null);
+  const [visitorStats, setVisitorStats] = useState({
+    online: 86,
+    visits: 65022,
+  });
 
   const selectedTotal = useMemo(
     () => (activeSlot ? activeSlot.price * form.days : 0),
     [activeSlot, form.days],
   );
+  const activeSchedule = activeSlot?.product?.schedule || "Available now";
+  const reservationWindow = useMemo(() => {
+    const start = new Date();
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + form.days - 1);
+
+    return `${formatUtcDate(start)} to ${formatUtcDate(end)}, UTC calendar days.`;
+  }, [form.days]);
+
+  useEffect(() => {
+    const visitsKey = "brandmymac-visit-count";
+    const currentVisits = Number(window.localStorage.getItem(visitsKey) || "65021");
+    const nextVisits = currentVisits + 1;
+    window.localStorage.setItem(visitsKey, String(nextVisits));
+
+    setVisitorStats({
+      online: 72 + Math.floor(Math.random() * 31),
+      visits: nextVisits,
+    });
+  }, []);
 
   function openSlot(slot: Slot) {
     setActiveSlot(slot);
@@ -130,12 +177,63 @@ export default function Home() {
       productName: "",
       website: "",
       title: "",
-      description: "",
-      keywords: "",
       email: "",
-      days: 14,
+      days: 3,
       iconPreview: "",
     });
+  }
+
+  function handleSlotClick(slot: Slot) {
+    if (slot.product) {
+      window.open(slot.product.url, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    openSlot(slot);
+  }
+
+  function getSlotMessage(slot: Slot) {
+    if (slot.product) {
+      return `> ${slot.label}: $${slot.price}/day | current: ${slot.product.schedule} | reserve next dates`;
+    }
+
+    return `> ${slot.label}: $${slot.price}/day | available now | reserve 3 or 7 days`;
+  }
+
+  function renderSlot(slot: Slot, size: "prime" | "standard") {
+    const isPrime = size === "prime";
+
+    return (
+      <div
+        className={`slot-cell ${isPrime ? "slot-cell-prime" : ""}`}
+        key={slot.id}
+        onMouseEnter={() => setHoveredSlot(slot)}
+        onMouseLeave={() => setHoveredSlot(null)}
+      >
+        <button
+          className={`ad-slot ${isPrime ? "ad-slot-prime" : ""} ${
+            slot.product ? "is-live" : "is-empty"
+          }`}
+          onClick={() => handleSlotClick(slot)}
+          type="button"
+        >
+          <span className={`demo-icon ${isPrime ? "demo-icon-large" : ""}`}>
+            {slot.product ? <img src={faviconUrl(slot.product.url)} alt="" /> : null}
+          </span>
+          <span>{slot.product?.name || slot.label}</span>
+        </button>
+        <button
+          className="reserve-badge"
+          onClick={(event) => {
+            event.stopPropagation();
+            openSlot(slot);
+          }}
+          type="button"
+        >
+          Reserve
+        </button>
+      </div>
+    );
   }
 
   function handleUrlBlur() {
@@ -146,8 +244,6 @@ export default function Home() {
       ...meta,
       productName: current.productName || meta.productName,
       title: current.title || meta.title,
-      description: current.description || meta.description,
-      keywords: current.keywords || meta.keywords,
     }));
   }
 
@@ -177,8 +273,6 @@ export default function Home() {
       productName: form.productName,
       website: form.website,
       title: form.title,
-      description: form.description,
-      keywords: form.keywords,
       iconPreview: form.iconPreview,
       email: form.email,
       days: form.days,
@@ -186,6 +280,8 @@ export default function Home() {
       total: selectedTotal,
       status: "Pending payment",
       paypalLink,
+      currentSchedule: activeSchedule,
+      requestedSchedule: reservationWindow,
       createdAt: new Date().toISOString(),
     };
 
@@ -195,26 +291,36 @@ export default function Home() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#f6f7fb] text-[#101010]">
-      <section className="mx-auto flex min-h-screen w-full max-w-[1500px] flex-col px-4 py-5 sm:px-8 lg:px-10">
-        <header className="flex items-center justify-between gap-4 py-3">
+      <section className="mx-auto flex min-h-screen w-full max-w-[1500px] flex-col px-4 pb-5 pt-20 sm:px-8 lg:px-10">
+        <header className="site-header">
           <Link className="brand-mark" href="/">
+            <span className="brand-device">
+              <img src="/brandmymac_2560w.png" alt="" />
+            </span>
             BrandMyMac
           </Link>
-          <nav className="flex items-center gap-2 text-sm font-semibold text-neutral-700">
+          <nav className="main-nav" aria-label="Primary navigation">
             <a href="#buy">Buy screen space</a>
-            <Link href="/schedule">Schedule</Link>
+            <a href="#how-it-works">How it works</a>
+            <a href="#the-machine">The machine</a>
+            <a href="#faq">FAQ</a>
           </nav>
         </header>
 
-        <div className="intro-grid">
-          <div>
-            <p className="eyebrow">Screen ads for Mac-native products</p>
-            <h1>Own a spot on the most watched desktop.</h1>
+        <div className="hero-copy">
+          <div className="live-stats" aria-label="Site activity">
+            <span>
+              <i aria-hidden="true" />
+              <strong>{visitorStats.online}</strong> people visiting this site now
+            </span>
+            <span>
+              <strong>{visitorStats.visits.toLocaleString()}</strong> Visitors so far
+            </span>
           </div>
+          <h1>Your brand, on my Mac Screen</h1>
           <p className="lead">
-            BrandMyMac sells clickable ad slots inside a Mac screen layout.
-            Choose a region, upload your product icon, add your link, and the
-            booking lands in the schedule for manual payment approval.
+            Contextual screen ads with fixed daily pricing. Reserve, confirm,
+            and go live.
           </p>
         </div>
 
@@ -225,76 +331,182 @@ export default function Home() {
             alt="MacBook screen with desktop wallpaper"
           />
           <div className="screen-overlay" aria-label="Available ad regions">
+            <div className="price-terminal" aria-live="polite">
+              {hoveredSlot
+                ? getSlotMessage(hoveredSlot)
+                : "> hover an empty slot to see placement terms"}
+            </div>
             <div className="slot-row slot-row-prime">
-              {slots.slice(0, 3).map((slot, index) => (
-                <button
-                  className="ad-slot ad-slot-prime"
-                  key={slot.id}
-                  onClick={() => openSlot(slot)}
-                  type="button"
-                >
-                  <span
-                    className="demo-icon demo-icon-large"
-                    style={{
-                      background: sampleLogos[index].tone,
-                      color: sampleLogos[index].accent,
-                    }}
-                  >
-                    {sampleLogos[index].name.slice(0, 1)}
-                  </span>
-                  <span>{slot.label}</span>
-                  <strong>${slot.price}/day</strong>
-                </button>
-              ))}
+              {slots.slice(0, 3).map((slot) => renderSlot(slot, "prime"))}
             </div>
 
             <div className="slot-row slot-row-six">
-              {slots.slice(3, 9).map((slot, index) => (
-                <button
-                  className="ad-slot"
-                  key={slot.id}
-                  onClick={() => openSlot(slot)}
-                  type="button"
-                >
-                  <span
-                    className="demo-icon"
-                    style={{
-                      background: sampleLogos[index + 3].tone,
-                      color: sampleLogos[index + 3].accent,
-                    }}
-                  >
-                    {sampleLogos[index + 3].name.slice(0, 1)}
-                  </span>
-                  <span>{slot.label}</span>
-                  <strong>${slot.price}/day</strong>
-                </button>
-              ))}
+              {slots.slice(3, 9).map((slot) => renderSlot(slot, "standard"))}
             </div>
 
             <div className="slot-row slot-row-six">
-              {slots.slice(9, 15).map((slot, index) => (
-                <button
-                  className="ad-slot"
-                  key={slot.id}
-                  onClick={() => openSlot(slot)}
-                  type="button"
-                >
-                  <span
-                    className="demo-icon"
-                    style={{
-                      background: sampleLogos[index + 9].tone,
-                      color: sampleLogos[index + 9].accent,
-                    }}
-                  >
-                    {sampleLogos[index + 9].name.slice(0, 1)}
-                  </span>
-                  <span>{slot.label}</span>
-                  <strong>${slot.price}/day</strong>
-                </button>
-              ))}
+              {slots.slice(9, 15).map((slot) => renderSlot(slot, "standard"))}
             </div>
           </div>
         </section>
+      </section>
+
+      <section id="how-it-works" className="content-band">
+        <div className="content-inner">
+          <p className="eyebrow">How it works</p>
+          <h2 className="how-heading">
+            Pick a screen region. Send your product. I review and switch it on.
+          </h2>
+          <div className="step-grid">
+            <article>
+              <strong>1</strong>
+              <h3>Choose a placement</h3>
+              <p>
+                Click any available area on the Mac screen and choose how many
+                days you want the product shown.
+              </p>
+            </article>
+            <article>
+              <strong>2</strong>
+              <h3>Submit product details</h3>
+              <p>
+                Upload an icon, add your link, and the form prepares a page
+                title for review.
+              </p>
+            </article>
+            <article>
+              <strong>3</strong>
+              <h3>Confirm by PayPal</h3>
+              <p>
+                I send a PayPal payment link by email. After payment is
+                confirmed, your placement goes live on the scheduled dates.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="the-machine" className="content-band machine-band">
+        <div className="content-inner machine-layout">
+          <div>
+            <p className="eyebrow">The machine</p>
+            <h2>The M1 Max that carried the work.</h2>
+          </div>
+          <p>
+            This MacBook Pro has been my daily machine for years: product
+            launches, late-night builds, client work, experiments that failed,
+            and a few that quietly paid the bills. BrandMyMac turns its screen
+            into a tiny product wall, one placement at a time. The goal is
+            simple: let this machine help fund the next Mac while giving useful
+            tools a place people actually look.
+          </p>
+        </div>
+      </section>
+
+      <section id="faq" className="content-band faq-band">
+        <div className="content-inner">
+          <p className="eyebrow">FAQ</p>
+          <div className="faq-list">
+            <article>
+              <h3>How do I reserve a placement?</h3>
+              <p>
+                Click a screen region, upload your product icon, add your
+                website, choose 3 or 7 continuous days, and submit your email.
+              </p>
+            </article>
+            <article>
+              <h3>What details do you need?</h3>
+              <p>
+                A product name, icon, website link, page title, email, selected
+                slot, and selected day package are enough for review.
+              </p>
+            </article>
+            <article>
+              <h3>How do payments work?</h3>
+              <p>
+                After your request is reviewed, I reply by email with a PayPal
+                payment link. Please check the inbox for the email you submit.
+              </p>
+            </article>
+            <article>
+              <h3>What if payment is late?</h3>
+              <p>
+                If you reserve 3 days on day 1, pay on day 2, and the placement
+                only runs for 2 days, I refund the unused 1 day fee.
+              </p>
+            </article>
+            <article>
+              <h3>Can any product be shown?</h3>
+              <p>
+                I review each request before it goes live. Products need a clear
+                website, usable icon, and a fit for the audience.
+              </p>
+            </article>
+            <article>
+              <h3>When does a placement start?</h3>
+              <p>
+                After PayPal payment is confirmed, I switch the placement on for
+                the selected number of days.
+              </p>
+            </article>
+            <article>
+              <h3>When will you reply?</h3>
+              <p>
+                Please allow for time zone delays. Normal reply hours are UTC
+                00:00-16:00.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="policy-band">
+        <div className="policy-inner">
+          <div>
+            <p className="eyebrow">Terms</p>
+            <h2>User service agreement</h2>
+            <p>
+              BrandMyMac provides fixed daily screen placements for approved
+              products. Submitting a request does not guarantee publication.
+              Placements are reviewed for fit, accuracy, and basic safety before
+              a PayPal payment link is sent. A placement starts only after
+              payment is confirmed. Selected packages must run continuously for
+              3 or 7 days and cannot be customized through the public form.
+            </p>
+            <p>
+              If a confirmed placement cannot run for the paid number of days,
+              the unused daily fee will be refunded. BrandMyMac may decline,
+              pause, or remove a placement that is misleading, harmful, illegal,
+              unavailable, or materially different from the submitted product.
+            </p>
+          </div>
+          <div>
+            <p className="eyebrow">Privacy</p>
+            <h2>User privacy policy</h2>
+            <p>
+              The form collects only the information needed to review and manage
+              a placement: product name, website, icon, page title, email,
+              selected slot, selected days, and payment status. This information
+              is used for review, scheduling, PayPal follow-up, and activation.
+            </p>
+            <p>
+              Submitted information is not sold. Product details may become
+              public when the placement is live. Email addresses are kept for
+              operational contact, payment follow-up, support, refunds, and
+              schedule records.
+            </p>
+          </div>
+          <footer className="contact-footer">
+            <a href="mailto:tiktreeapp@gmal.com">tiktreeapp@gmal.com</a>
+            <a
+              className="x-link"
+              href="https://x.com/weisun29255385"
+              target="_blank"
+            >
+              X @weisun29255385
+            </a>
+          </footer>
+        </div>
       </section>
 
       {activeSlot && (
@@ -327,6 +539,7 @@ export default function Home() {
                 <div>
                   <p className="eyebrow">{activeSlot.label}</p>
                   <h2>Reserve this screen region</h2>
+                  <p className="schedule-note">Current schedule: {activeSchedule}</p>
                   <p className="price-line">
                     ${activeSlot.price}/day, {form.days} days, total $
                     {selectedTotal}
@@ -382,45 +595,24 @@ export default function Home() {
                   />
                 </label>
 
-                <label>
-                  Description
-                  <textarea
-                    required
-                    value={form.description}
-                    onChange={(event) =>
-                      setForm({ ...form, description: event.target.value })
-                    }
-                    placeholder="Auto-filled from link"
-                  />
-                </label>
-
-                <label>
-                  Keywords
-                  <input
-                    value={form.keywords}
-                    onChange={(event) =>
-                      setForm({ ...form, keywords: event.target.value })
-                    }
-                    placeholder="Auto-filled from link"
-                  />
-                </label>
-
-                <div className="form-grid">
-                  <label>
-                    Days
-                    <select
-                      value={form.days}
-                      onChange={(event) =>
-                        setForm({ ...form, days: Number(event.target.value) })
-                      }
-                    >
+                <div className="booking-row-fields">
+                  <div>
+                    <fieldset className="day-picker">
+                      <legend>Days</legend>
                       {dayOptions.map((days) => (
-                        <option key={days} value={days}>
+                        <button
+                          className={form.days === days ? "is-selected" : ""}
+                          key={days}
+                          onClick={() => setForm({ ...form, days })}
+                          type="button"
+                        >
                           {days} days
-                        </option>
+                        </button>
                       ))}
-                    </select>
-                  </label>
+                    </fieldset>
+                    <p className="date-note">{reservationWindow}</p>
+                  </div>
+
                   <label>
                     Email
                     <input
@@ -430,9 +622,21 @@ export default function Home() {
                       onChange={(event) =>
                         setForm({ ...form, email: event.target.value })
                       }
-                      placeholder="you@company.com"
+                      placeholder="your PayPal email"
                     />
                   </label>
+                </div>
+
+                <div className="tips-box">
+                  <strong>Tips</strong>
+                  <p>
+                    Placement dates must run continuously for 3 or 7 days.
+                    Custom day selection is not supported.
+                  </p>
+                  <p>
+                    After receiving your request, we reply with a PayPal
+                    payment link. Please leave your PayPal email first.
+                  </p>
                 </div>
 
                 <button className="submit-button" type="submit">
