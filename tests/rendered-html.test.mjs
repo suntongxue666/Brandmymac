@@ -35,17 +35,49 @@ test("server-renders the BrandMyMac screen marketplace", async () => {
   assert.match(html, /Reserve fixed daily placements inside a Mac screen marketplace/i);
   assert.match(html, /Your brand, on my Mac Screen/);
   assert.match(html, /Contextual screen ads with fixed daily pricing/);
-  assert.match(html, /src="\/brandmymac_2560w\.png"/);
+  assert.match(
+    html,
+    /https:\/\/pub-76f2f1fc81ef48fbb698a2518f11013d\.r2\.dev\/brandmymac_2560w-2\.png/,
+  );
   assert.match(html, /Figma/);
   assert.match(html, /Raycast/);
   assert.match(html, /Prime 2/);
   assert.match(html, /Desktop 12/);
   assert.match(html, /hover an empty slot to see placement terms/);
   assert.match(html, /Reserve/);
-  assert.match(html, /User service agreement/);
-  assert.match(html, /User privacy policy/);
-  assert.match(html, /tiktreeapp@gmal\.com/);
+  assert.match(html, /href="\/terms"/);
+  assert.match(html, /href="\/privacy"/);
+  assert.match(html, /tiktreeapp@gmail\.com/);
+  assert.match(html, /© 2026 OutbidSocial\. All rights reserved\./);
+  assert.match(html, /BrandMyMac\.xyz is not affiliated with/);
   assert.equal((html.match(/class="ad-slot/g) || []).length, 15);
+});
+
+test("server-renders dedicated legal pages", async () => {
+  const termsResponse = await render("/terms");
+  assert.equal(termsResponse.status, 200);
+  const termsHtml = await termsResponse.text();
+  assert.match(termsHtml, /User Service Agreement/);
+  assert.match(termsHtml, /must run continuously for 3 or 7 days/);
+  assert.match(termsHtml, /tiktreeapp@gmail\.com/);
+
+  const privacyResponse = await render("/privacy");
+  assert.equal(privacyResponse.status, 200);
+  const privacyHtml = await privacyResponse.text();
+  assert.match(privacyHtml, /User Privacy Policy/);
+  assert.match(privacyHtml, /Submitted information is not sold/);
+  assert.match(privacyHtml, /Visitor counts and short-lived session cookies/);
+});
+
+test("serves visitor stats with sane minimums", async () => {
+  const response = await render("/api/stats");
+  assert.equal(response.status, 200);
+
+  const stats = await response.json();
+  assert.equal(typeof stats.online, "number");
+  assert.equal(typeof stats.visits, "number");
+  assert.ok(stats.online >= 2);
+  assert.ok(stats.visits >= 100);
 });
 
 test("server-renders the schedule page", async () => {

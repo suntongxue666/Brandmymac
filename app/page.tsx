@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 
+const macImageUrl =
+  "https://pub-76f2f1fc81ef48fbb698a2518f11013d.r2.dev/brandmymac_2560w-2.png";
+
 type Slot = {
   id: string;
   row: "hero" | "standard";
@@ -141,8 +144,8 @@ export default function Home() {
   const [submitted, setSubmitted] = useState<Booking | null>(null);
   const [hoveredSlot, setHoveredSlot] = useState<Slot | null>(null);
   const [visitorStats, setVisitorStats] = useState({
-    online: 86,
-    visits: 65022,
+    online: 2,
+    visits: 100,
   });
 
   const selectedTotal = useMemo(
@@ -159,15 +162,25 @@ export default function Home() {
   }, [form.days]);
 
   useEffect(() => {
-    const visitsKey = "brandmymac-visit-count";
-    const currentVisits = Number(window.localStorage.getItem(visitsKey) || "65021");
-    const nextVisits = currentVisits + 1;
-    window.localStorage.setItem(visitsKey, String(nextVisits));
+    let cancelled = false;
 
-    setVisitorStats({
-      online: 72 + Math.floor(Math.random() * 31),
-      visits: nextVisits,
-    });
+    fetch("/api/stats", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((stats: { online?: number; visits?: number } | null) => {
+        if (cancelled || !stats) return;
+        setVisitorStats({
+          online: Math.max(2, Number(stats.online) || 2),
+          visits: Math.max(100, Number(stats.visits) || 100),
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setVisitorStats({ online: 2, visits: 100 });
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function openSlot(slot: Slot) {
@@ -295,7 +308,7 @@ export default function Home() {
         <header className="site-header">
           <Link className="brand-mark" href="/">
             <span className="brand-device">
-              <img src="/brandmymac_2560w.png" alt="" />
+              <img src={macImageUrl} alt="" />
             </span>
             BrandMyMac
           </Link>
@@ -327,7 +340,7 @@ export default function Home() {
         <section id="buy" className="mac-stage" aria-label="BrandMyMac slots">
           <img
             className="mac-shell"
-            src="/brandmymac_2560w.png"
+            src={macImageUrl}
             alt="MacBook screen with desktop wallpaper"
           />
           <div className="screen-overlay" aria-label="Available ad regions">
@@ -461,43 +474,19 @@ export default function Home() {
       </section>
 
       <section className="policy-band">
-        <div className="policy-inner">
+        <div className="policy-inner footer-inner">
           <div>
-            <p className="eyebrow">Terms</p>
-            <h2>User service agreement</h2>
+            <p className="eyebrow">Legal</p>
+            <h2>BrandMyMac</h2>
             <p>
-              BrandMyMac provides fixed daily screen placements for approved
-              products. Submitting a request does not guarantee publication.
-              Placements are reviewed for fit, accuracy, and basic safety before
-              a PayPal payment link is sent. A placement starts only after
-              payment is confirmed. Selected packages must run continuously for
-              3 or 7 days and cannot be customized through the public form.
-            </p>
-            <p>
-              If a confirmed placement cannot run for the paid number of days,
-              the unused daily fee will be refunded. BrandMyMac may decline,
-              pause, or remove a placement that is misleading, harmful, illegal,
-              unavailable, or materially different from the submitted product.
-            </p>
-          </div>
-          <div>
-            <p className="eyebrow">Privacy</p>
-            <h2>User privacy policy</h2>
-            <p>
-              The form collects only the information needed to review and manage
-              a placement: product name, website, icon, page title, email,
-              selected slot, selected days, and payment status. This information
-              is used for review, scheduling, PayPal follow-up, and activation.
-            </p>
-            <p>
-              Submitted information is not sold. Product details may become
-              public when the placement is live. Email addresses are kept for
-              operational contact, payment follow-up, support, refunds, and
-              schedule records.
+              Fixed daily Mac screen placements for reviewed products. Read the
+              terms and privacy policy before submitting a request.
             </p>
           </div>
           <footer className="contact-footer">
-            <a href="mailto:tiktreeapp@gmal.com">tiktreeapp@gmal.com</a>
+            <Link href="/terms">Terms of Service</Link>
+            <Link href="/privacy">Privacy Policy</Link>
+            <a href="mailto:tiktreeapp@gmail.com">tiktreeapp@gmail.com</a>
             <a
               className="x-link"
               href="https://x.com/weisun29255385"
@@ -506,6 +495,11 @@ export default function Home() {
               X @weisun29255385
             </a>
           </footer>
+          <p className="copyright">© 2026 OutbidSocial. All rights reserved.</p>
+          <p className="apple-disclaimer">
+            BrandMyMac.xyz is not affiliated with, endorsed by, or sponsored by
+            Apple Inc. MacBook Pro and Mac are trademarks of Apple Inc.
+          </p>
         </div>
       </section>
 

@@ -63,14 +63,16 @@ export default function SchedulePage() {
   const [isAllowed, setIsAllowed] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const adminToken = params.get("admin");
-    const allowed = adminToken === "brandmymac-admin";
-    setIsAllowed(allowed);
-    if (!allowed) return;
+    queueMicrotask(() => {
+      const params = new URLSearchParams(window.location.search);
+      const adminToken = params.get("admin");
+      const allowed = adminToken === "brandmymac-admin";
+      setIsAllowed(allowed);
+      if (!allowed) return;
 
-    const stored = window.localStorage.getItem("brandmymac-bookings");
-    setBookings([...defaultBookings, ...(stored ? JSON.parse(stored) : [])]);
+      const stored = window.localStorage.getItem("brandmymac-bookings");
+      setBookings([...defaultBookings, ...(stored ? JSON.parse(stored) : [])]);
+    });
   }, []);
 
   return (
