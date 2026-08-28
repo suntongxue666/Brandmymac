@@ -48,7 +48,8 @@ test("server-renders the BrandMyMac screen marketplace", async () => {
   assert.match(html, /href="\/terms"/);
   assert.match(html, /href="\/privacy"/);
   assert.match(html, /tiktreeapp@gmail\.com/);
-  assert.match(html, /© 2026 OutbidSocial\. All rights reserved\./);
+  assert.match(html, /G-M0KLSDHYDG/);
+  assert.match(html, /© 2026 BrandMyMac\.xyz\. All rights reserved\./);
   assert.match(html, /BrandMyMac\.xyz is not affiliated with/);
   assert.equal((html.match(/class="ad-slot/g) || []).length, 15);
 });

@@ -576,18 +576,42 @@ h3 {
   font-weight: 900;
 }
 
-.copyright,
-.apple-disclaimer {
+.footer-bottom {
+  display: flex;
   grid-column: 1 / -1;
-  margin: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
   border-top: 1px solid rgba(16, 16, 16, 0.1);
   padding-top: 1.1rem;
+}
+
+.copyright,
+.apple-disclaimer {
+  margin: 0;
   font-size: 0.9rem;
 }
 
 .apple-disclaimer {
-  border-top: 0;
-  padding-top: 0;
+  grid-column: 1 / -1;
+}
+
+.legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.9rem;
+}
+
+.legal-links a {
+  color: #25262b;
+  font-weight: 820;
+}
+
+.legal-links a:hover,
+.legal-links a:focus-visible {
+  color: #d93456;
+  outline: none;
 }
 
 .legal-page {

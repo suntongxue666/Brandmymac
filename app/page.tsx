@@ -484,8 +484,6 @@ export default function Home() {
             </p>
           </div>
           <footer className="contact-footer">
-            <Link href="/terms">Terms of Service</Link>
-            <Link href="/privacy">Privacy Policy</Link>
             <a href="mailto:tiktreeapp@gmail.com">tiktreeapp@gmail.com</a>
             <a
               className="x-link"
@@ -495,7 +493,15 @@ export default function Home() {
               X @weisun29255385
             </a>
           </footer>
-          <p className="copyright">© 2026 OutbidSocial. All rights reserved.</p>
+          <div className="footer-bottom">
+            <p className="copyright">
+              © 2026 BrandMyMac.xyz. All rights reserved.
+            </p>
+            <nav className="legal-links" aria-label="Legal links">
+              <Link href="/terms">Terms of Service</Link>
+              <Link href="/privacy">Privacy Policy</Link>
+            </nav>
+          </div>
           <p className="apple-disclaimer">
             BrandMyMac.xyz is not affiliated with, endorsed by, or sponsored by
             Apple Inc. MacBook Pro and Mac are trademarks of Apple Inc.
