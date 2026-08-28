@@ -72,6 +72,39 @@ export default function SchedulePage() {
   const [message, setMessage] = useState("");
 
   const hasData = useMemo(() => bookings.length > 0 || slots.length > 0, [bookings, slots]);
+  const primeSlots = useMemo(
+    () => slots.filter((slot) => slot.row_type === "hero"),
+    [slots],
+  );
+  const desktopSlots = useMemo(
+    () => slots.filter((slot) => slot.row_type === "standard"),
+    [slots],
+  );
+
+  function renderPriceControl(slot: SlotPrice) {
+    return (
+      <label className="price-control" key={slot.slot_id}>
+        <span>{slot.label}</span>
+        <input
+          min="0"
+          type="number"
+          value={slot.price}
+          onChange={(event) =>
+            setSlots((current) =>
+              current.map((item) =>
+                item.slot_id === slot.slot_id
+                  ? { ...item, price: Number(event.target.value) }
+                  : item,
+              ),
+            )
+          }
+          onBlur={(event) =>
+            updateSlotPrice(slot.slot_id, Number(event.target.value))
+          }
+        />
+      </label>
+    );
+  }
 
   async function loadSchedule() {
     const response = await fetch(`/api/admin/bookings?admin=${adminToken}`, {
@@ -222,49 +255,18 @@ export default function SchedulePage() {
                 Existing paid schedules keep their original price. Updated
                 prices apply to new booking requests only.
               </p>
-              <div className="price-grid">
-                {slots.map((slot) => (
-                  <label className="price-control" key={slot.slot_id}>
-                    <span>{slot.label}</span>
-                    <input
-                      min="0"
-                      type="number"
-                      value={slot.price}
-                      onChange={(event) =>
-                        setSlots((current) =>
-                          current.map((item) =>
-                            item.slot_id === slot.slot_id
-                              ? { ...item, price: Number(event.target.value) }
-                              : item,
-                          ),
-                        )
-                      }
-                      onBlur={(event) =>
-                        updateSlotPrice(slot.slot_id, Number(event.target.value))
-                      }
-                    />
-                  </label>
-                ))}
+              <div className="price-layout">
+                <div className="price-grid price-grid-prime">
+                  {primeSlots.map(renderPriceControl)}
+                </div>
+                <div className="price-grid price-grid-desktop">
+                  {desktopSlots.slice(0, 6).map(renderPriceControl)}
+                </div>
+                <div className="price-grid price-grid-desktop">
+                  {desktopSlots.slice(6, 12).map(renderPriceControl)}
+                </div>
               </div>
             </section>
-
-            {traffic?.recentVisitors?.length ? (
-              <section className="visitor-admin">
-                <h2>Recent visitors</h2>
-                <div className="visitor-table">
-                  {traffic.recentVisitors.map((visitor) => (
-                    <article key={visitor.device_id}>
-                      <strong>{visitor.ip || "No IP"}</strong>
-                      <p>{visitor.user_agent || "No user agent"}</p>
-                      <small>
-                        {visitor.device_id.slice(0, 8)} · {visitor.country || "Unknown"} ·{" "}
-                        {visitor.visits} visits
-                      </small>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            ) : null}
 
             <div className="booking-table">
               {bookings.map((booking) => (
@@ -340,13 +342,39 @@ export default function SchedulePage() {
                         }
                       />
                     </label>
-                    <a className="paypal-button" href={booking.paypalLink} target="_blank">
-                      PayPal
-                    </a>
+                    {booking.paypalLink ? (
+                      <a
+                        className="paypal-button"
+                        href={booking.paypalLink}
+                        target="_blank"
+                      >
+                        Payment link
+                      </a>
+                    ) : (
+                      <span className="paypal-button is-disabled">No link</span>
+                    )}
                   </div>
                 </article>
               ))}
             </div>
+
+            {traffic?.recentVisitors?.length ? (
+              <section className="visitor-admin">
+                <h2>Recent visitors</h2>
+                <div className="visitor-table">
+                  {traffic.recentVisitors.map((visitor) => (
+                    <article key={visitor.device_id}>
+                      <strong>{visitor.ip || "No IP"}</strong>
+                      <p>{visitor.user_agent || "No user agent"}</p>
+                      <small>
+                        {visitor.device_id.slice(0, 8)} · {visitor.country || "Unknown"} ·{" "}
+                        {visitor.visits} visits
+                      </small>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </div>
         )}
       </section>

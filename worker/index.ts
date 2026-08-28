@@ -413,9 +413,12 @@ function slotFromRow(row: SlotRow, booking?: BookingRow) {
             url: booking.website,
             schedule: scheduleLabel(booking.start_at, booking.end_at),
             iconPreview: booking.icon_preview,
+            startAt: booking.start_at,
+            endAt: booking.end_at,
           }
         : undefined,
     nextSchedule: booking ? scheduleLabel(booking.start_at, booking.end_at) : undefined,
+    nextAvailableAt: booking ? booking.end_at : undefined,
   };
 }
 
@@ -565,11 +568,16 @@ async function handleSlotsRequest(env: Env) {
     .prepare("SELECT slot_id, label, row_type, price, sort_order FROM brandmymac_slots ORDER BY sort_order")
     .all<SlotRow>();
   const liveBookings = await env.DB
-    .prepare("SELECT * FROM brandmymac_bookings WHERE status = 'Active' ORDER BY start_at DESC")
+    .prepare(
+      "SELECT * FROM brandmymac_bookings WHERE status IN ('Active', 'Scheduled') ORDER BY end_at DESC",
+    )
     .all<BookingRow>();
-  const bookingsBySlot = new Map(
-    (liveBookings.results || []).map((booking) => [booking.slot_id, booking]),
-  );
+  const bookingsBySlot = new Map<string, BookingRow>();
+  for (const booking of liveBookings.results || []) {
+    if (!bookingsBySlot.has(booking.slot_id)) {
+      bookingsBySlot.set(booking.slot_id, booking);
+    }
+  }
 
   return json({
     slots: (slots.results || []).map((slot) => slotFromRow(slot, bookingsBySlot.get(slot.slot_id))),

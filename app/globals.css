@@ -715,13 +715,19 @@ h3 {
 
 .price-line {
   margin-bottom: 0;
-  color: #565b66;
+  color: #101010;
   font-weight: 700;
+}
+
+.price-line span,
+.schedule-note span,
+.slot-name-highlight {
+  color: #d93456;
 }
 
 .schedule-note {
   margin-bottom: 0.45rem;
-  color: #565b66;
+  color: #101010;
   font-size: 0.92rem;
   font-weight: 720;
 }
@@ -977,11 +983,23 @@ select:focus {
   font-size: 1.2rem;
 }
 
-.price-grid {
+.price-layout {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.75rem;
   margin-top: 1rem;
+}
+
+.price-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.price-grid-prime {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.price-grid-desktop {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .price-control {
@@ -1105,6 +1123,11 @@ select:focus {
   padding-inline: 1rem;
 }
 
+.paypal-button.is-disabled {
+  cursor: default;
+  opacity: 0.48;
+}
+
 .admin-controls {
   display: grid;
   gap: 0.55rem;
@@ -1162,7 +1185,8 @@ select:focus {
     grid-template-columns: 1fr;
   }
 
-  .price-grid {
+  .price-grid-prime,
+  .price-grid-desktop {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1210,7 +1234,8 @@ select:focus {
     flex-direction: column;
   }
 
-  .price-grid {
+  .price-grid-prime,
+  .price-grid-desktop {
     grid-template-columns: 1fr;
   }
 }

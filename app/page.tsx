@@ -12,11 +12,14 @@ type Slot = {
   label: string;
   price: number;
   nextSchedule?: string;
+  nextAvailableAt?: string;
   product?: {
     name: string;
     url: string;
     schedule: string;
     iconPreview?: string;
+    startAt?: string;
+    endAt?: string;
   };
 };
 
@@ -62,6 +65,8 @@ const initialSlots: Slot[] = [
       url: "https://figma.com",
       schedule: "Aug 28, 2026 to Sep 3, 2026 (UTC)",
       iconPreview: "https://www.google.com/s2/favicons?domain=figma.com&sz=128",
+      startAt: "2026-08-28T00:00:00.000Z",
+      endAt: "2026-09-03T23:59:59.000Z",
     },
   },
   { id: "desk-8", row: "standard", label: "Desktop 8", price: 5 },
@@ -76,6 +81,8 @@ const initialSlots: Slot[] = [
       url: "https://raycast.com",
       schedule: "Aug 28, 2026 to Sep 3, 2026 (UTC)",
       iconPreview: "https://www.google.com/s2/favicons?domain=raycast.com&sz=128",
+      startAt: "2026-08-28T00:00:00.000Z",
+      endAt: "2026-09-03T23:59:59.000Z",
     },
   },
   { id: "desk-11", row: "standard", label: "Desktop 11", price: 5 },
@@ -100,6 +107,12 @@ function formatUtcDate(date: Date) {
     year: "numeric",
     timeZone: "UTC",
   }).format(date);
+}
+
+function startOfUtcDay(date: Date) {
+  const next = new Date(date);
+  next.setUTCHours(0, 0, 0, 0);
+  return next;
 }
 
 function inferMetaFromUrl(url: string) {
@@ -161,14 +174,27 @@ export default function Home() {
     () => (activeSlot ? activeSlot.price * form.days : 0),
     [activeSlot, form.days],
   );
-  const activeSchedule = activeSlot?.product?.schedule || "Available now";
+  const activeSchedule =
+    activeSlot?.product?.schedule ||
+    (activeSlot?.nextSchedule ? `Reserved: ${activeSlot.nextSchedule}` : "Available now");
+  const reservationStart = useMemo(() => {
+    const now = startOfUtcDay(new Date());
+    const blockedUntil = activeSlot?.nextAvailableAt || activeSlot?.product?.endAt;
+    if (!blockedUntil) return now;
+
+    const next = new Date(blockedUntil);
+    if (Number.isNaN(next.getTime())) return now;
+    next.setUTCDate(next.getUTCDate() + 1);
+    return startOfUtcDay(next);
+  }, [activeSlot]);
   const reservationWindow = useMemo(() => {
-    const start = new Date();
+    const start = reservationStart;
     const end = new Date(start);
     end.setUTCDate(end.getUTCDate() + form.days - 1);
+    end.setUTCHours(23, 59, 59, 0);
 
     return `${formatUtcDate(start)} to ${formatUtcDate(end)}, UTC calendar days.`;
-  }, [form.days]);
+  }, [form.days, reservationStart]);
 
   useEffect(() => {
     let cancelled = false;
@@ -329,6 +355,7 @@ export default function Home() {
       paypalLink,
       currentSchedule: activeSchedule,
       requestedSchedule: reservationWindow,
+      startAt: reservationStart.toISOString(),
       createdAt: new Date().toISOString(),
     };
 
@@ -347,6 +374,7 @@ export default function Home() {
           email: booking.email,
           days: booking.days,
           requestedSchedule: booking.requestedSchedule,
+          startAt: reservationStart.toISOString(),
         }),
       });
       const payload = (await response.json()) as {
@@ -600,12 +628,19 @@ export default function Home() {
             ) : (
               <form className="booking-form" onSubmit={submitBooking}>
                 <div>
-                  <p className="eyebrow">{activeSlot.label}</p>
-                  <h2>Reserve this screen region</h2>
-                  <p className="schedule-note">Current schedule: {activeSchedule}</p>
+                  <h2>
+                    Reserve{" "}
+                    <span className="slot-name-highlight">{activeSlot.label}</span>
+                  </h2>
+                  <p className="schedule-note">
+                    Current schedule: <span>{activeSchedule}</span>
+                  </p>
                   <p className="price-line">
-                    ${activeSlot.price}/day, {form.days} days, total $
-                    {selectedTotal}
+                    <strong>Price &amp; days:</strong>{" "}
+                    <span>
+                      ${activeSlot.price}/day, {form.days} days, total $
+                      {selectedTotal}
+                    </span>
                   </p>
                 </div>
 
