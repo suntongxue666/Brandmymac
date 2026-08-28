@@ -1115,6 +1115,30 @@ select:focus {
   white-space: nowrap;
 }
 
+.booking-product-actions {
+  display: flex;
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+}
+
+.edit-button {
+  border: 1px solid rgba(16, 16, 16, 0.14);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #101010;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 850;
+  padding: 0.45rem 0.75rem;
+}
+
+.edit-button:hover,
+.edit-button:focus-visible {
+  border-color: #d93456;
+  color: #d93456;
+  outline: none;
+}
+
 .booking-copy {
   min-width: 0;
 }

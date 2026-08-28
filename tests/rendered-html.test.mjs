@@ -133,6 +133,8 @@ test("source wires D1-backed scheduling and admin email", async () => {
   assert.match(worker, /handleUpdateSlot/);
   assert.match(worker, /nextAvailableAt/);
   assert.match(worker, /status IN \('Active', 'Scheduled'\)/);
+  assert.match(worker, /product_name = \?/);
+  assert.match(worker, /icon_preview = \?/);
   assert.match(page, /fetch\("\/api\/bookings"/);
   assert.match(page, /setInterval\(loadStats, 60000\)/);
   assert.match(page, /setInterval\(loadSlots, 60000\)/);
@@ -147,6 +149,10 @@ test("source wires D1-backed scheduling and admin email", async () => {
   assert.match(schedule, /Existing paid schedules keep their original price/);
   assert.match(schedule, /Recent visitors/);
   assert.match(schedule, /Payment link/);
+  assert.match(schedule, /openBookingEditor/);
+  assert.match(schedule, /Product icon/);
+  assert.match(schedule, /Save/);
+  assert.doesNotMatch(schedule, /No link/);
   assert.match(schedule, /Paid/);
   assert.match(schedule, /Start UTC/);
   assert.match(schedule, /End UTC/);

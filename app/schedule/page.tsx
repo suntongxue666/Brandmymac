@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 
 type Booking = {
   id: string;
@@ -51,6 +51,7 @@ type Traffic = {
 };
 
 const adminToken = "brandmymac-admin";
+const dayOptions = [3, 7];
 
 function toDatetimeLocal(value: string) {
   if (!value) return "";
@@ -70,6 +71,17 @@ export default function SchedulePage() {
   const [traffic, setTraffic] = useState<Traffic | null>(null);
   const [isAllowed, setIsAllowed] = useState(false);
   const [message, setMessage] = useState("");
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [editForm, setEditForm] = useState({
+    productName: "",
+    website: "",
+    title: "",
+    iconPreview: "",
+    email: "",
+    days: 3,
+    startAt: "",
+    endAt: "",
+  });
 
   const hasData = useMemo(() => bookings.length > 0 || slots.length > 0, [bookings, slots]);
   const primeSlots = useMemo(
@@ -175,7 +187,20 @@ export default function SchedulePage() {
 
   async function updateBooking(
     booking: Booking,
-    patch: Partial<Pick<Booking, "paid" | "startAt" | "endAt">>,
+    patch: Partial<
+      Pick<
+        Booking,
+        | "paid"
+        | "startAt"
+        | "endAt"
+        | "productName"
+        | "website"
+        | "title"
+        | "iconPreview"
+        | "email"
+        | "days"
+      >
+    >,
   ) {
     setMessage("");
     const response = await fetch(`/api/admin/bookings?admin=${adminToken}`, {
@@ -183,6 +208,12 @@ export default function SchedulePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: booking.id,
+        productName: patch.productName ?? booking.productName,
+        website: patch.website ?? booking.website,
+        title: patch.title ?? booking.title,
+        iconPreview: patch.iconPreview ?? booking.iconPreview,
+        email: patch.email ?? booking.email,
+        days: patch.days ?? booking.days,
         paid: patch.paid ?? booking.paid,
         startAt: patch.startAt ?? booking.startAt,
         endAt: patch.endAt ?? booking.endAt,
@@ -197,13 +228,60 @@ export default function SchedulePage() {
 
     if (!response.ok) {
       setMessage(payload.error || "Booking update failed.");
-      return;
+      return false;
     }
 
     setBookings(payload.bookings || []);
     setSlots(payload.slots || []);
     setTraffic(payload.traffic || null);
     setMessage("Schedule updated.");
+    return true;
+  }
+
+  function openBookingEditor(booking: Booking) {
+    setEditingBooking(booking);
+    setMessage("");
+    setEditForm({
+      productName: booking.productName,
+      website: booking.website,
+      title: booking.title,
+      iconPreview: booking.iconPreview,
+      email: booking.email,
+      days: booking.days === 7 ? 7 : 3,
+      startAt: toDatetimeLocal(booking.startAt),
+      endAt: toDatetimeLocal(booking.endAt),
+    });
+  }
+
+  function handleEditIconUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setEditForm((current) => ({
+        ...current,
+        iconPreview: String(reader.result),
+      }));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function submitEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingBooking) return;
+
+    const saved = await updateBooking(editingBooking, {
+      productName: editForm.productName,
+      website: editForm.website,
+      title: editForm.title,
+      iconPreview: editForm.iconPreview,
+      email: editForm.email,
+      days: editForm.days,
+      startAt: fromDatetimeLocal(editForm.startAt),
+      endAt: fromDatetimeLocal(editForm.endAt),
+    });
+    if (saved) setEditingBooking(null);
   }
 
   return (
@@ -282,6 +360,15 @@ export default function SchedulePage() {
                       <a href={booking.website} target="_blank">
                         {booking.website}
                       </a>
+                      <div className="booking-product-actions">
+                        <button
+                          className="edit-button"
+                          onClick={() => openBookingEditor(booking)}
+                          type="button"
+                        >
+                          Edit
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -350,9 +437,7 @@ export default function SchedulePage() {
                       >
                         Payment link
                       </a>
-                    ) : (
-                      <span className="paypal-button is-disabled">No link</span>
-                    )}
+                    ) : null}
                   </div>
                 </article>
               ))}
@@ -378,6 +463,154 @@ export default function SchedulePage() {
           </div>
         )}
       </section>
+
+      {editingBooking ? (
+        <div className="modal-layer" role="dialog" aria-modal="true">
+          <div className="booking-modal">
+            <button
+              className="close-button"
+              onClick={() => setEditingBooking(null)}
+              type="button"
+              aria-label="Close"
+            >
+              x
+            </button>
+
+            <form className="booking-form" onSubmit={submitEdit}>
+              <div>
+                <h2>
+                  Edit{" "}
+                  <span className="slot-name-highlight">
+                    {editingBooking.slotLabel}
+                  </span>
+                </h2>
+                <p className="schedule-note">
+                  Current schedule:{" "}
+                  <span>
+                    {editingBooking.currentSchedule ||
+                      editingBooking.requestedSchedule}
+                  </span>
+                </p>
+                <p className="price-line">
+                  <strong>Price &amp; days:</strong>{" "}
+                  <span>
+                    ${editingBooking.price}/day, {editForm.days} days, total $
+                    {editingBooking.price * editForm.days}
+                  </span>
+                </p>
+              </div>
+
+              <label className="upload-field">
+                <span>Product icon</span>
+                {editForm.iconPreview ? (
+                  <img src={editForm.iconPreview} alt="" />
+                ) : (
+                  <strong>Upload</strong>
+                )}
+                <input accept="image/*" onChange={handleEditIconUpload} type="file" />
+              </label>
+
+              <div className="form-grid">
+                <label>
+                  Product name
+                  <input
+                    required
+                    value={editForm.productName}
+                    onChange={(event) =>
+                      setEditForm({ ...editForm, productName: event.target.value })
+                    }
+                    placeholder="Your product"
+                  />
+                </label>
+                <label>
+                  Product link
+                  <input
+                    required
+                    type="url"
+                    value={editForm.website}
+                    onChange={(event) =>
+                      setEditForm({ ...editForm, website: event.target.value })
+                    }
+                    placeholder="https://example.com"
+                  />
+                </label>
+              </div>
+
+              <label>
+                Page title
+                <input
+                  required
+                  value={editForm.title}
+                  onChange={(event) =>
+                    setEditForm({ ...editForm, title: event.target.value })
+                  }
+                  placeholder="Auto-filled from link"
+                />
+              </label>
+
+              <div className="booking-row-fields">
+                <div>
+                  <fieldset className="day-picker">
+                    <legend>Days</legend>
+                    {dayOptions.map((days) => (
+                      <button
+                        className={editForm.days === days ? "is-selected" : ""}
+                        key={days}
+                        onClick={() => setEditForm({ ...editForm, days })}
+                        type="button"
+                      >
+                        {days} days
+                      </button>
+                    ))}
+                  </fieldset>
+                </div>
+
+                <label>
+                  Email
+                  <input
+                    required
+                    type="email"
+                    value={editForm.email}
+                    onChange={(event) =>
+                      setEditForm({ ...editForm, email: event.target.value })
+                    }
+                    placeholder="your PayPal email"
+                  />
+                </label>
+              </div>
+
+              <div className="form-grid">
+                <label>
+                  Start UTC
+                  <input
+                    required
+                    type="datetime-local"
+                    value={editForm.startAt}
+                    onChange={(event) =>
+                      setEditForm({ ...editForm, startAt: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  End UTC
+                  <input
+                    required
+                    type="datetime-local"
+                    value={editForm.endAt}
+                    onChange={(event) =>
+                      setEditForm({ ...editForm, endAt: event.target.value })
+                    }
+                  />
+                </label>
+              </div>
+
+              <button className="submit-button" type="submit">
+                Save
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

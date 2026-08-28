@@ -747,6 +747,12 @@ async function handleUpdateBooking(request: Request, env: Env) {
     paid?: boolean;
     startAt?: string;
     endAt?: string;
+    productName?: string;
+    website?: string;
+    title?: string;
+    iconPreview?: string;
+    email?: string;
+    days?: number;
   };
   const existing = payload.id
     ? await env.DB
@@ -759,14 +765,35 @@ async function handleUpdateBooking(request: Request, env: Env) {
 
   const startAt = payload.startAt || existing.start_at;
   const endAt = payload.endAt || existing.end_at;
+  const days = payload.days === 7 ? 7 : payload.days === 3 ? 3 : existing.days;
   const paid = typeof payload.paid === "boolean" ? (payload.paid ? 1 : 0) : existing.paid;
+  const total = existing.price * days;
+  const paypalLink = paid
+    ? existing.paypal_link
+    : `https://www.paypal.com/paypalme/brandmymac/${total}`;
   const status = statusForBooking({ paid, start_at: startAt, end_at: endAt });
 
   await env.DB
     .prepare(
-      "UPDATE brandmymac_bookings SET paid = ?, start_at = ?, end_at = ?, requested_schedule = ?, status = ?, updated_at = ? WHERE id = ?",
+      "UPDATE brandmymac_bookings SET product_name = ?, website = ?, title = ?, icon_preview = ?, email = ?, days = ?, total = ?, paypal_link = ?, paid = ?, start_at = ?, end_at = ?, requested_schedule = ?, status = ?, updated_at = ? WHERE id = ?",
     )
-    .bind(paid, startAt, endAt, scheduleLabel(startAt, endAt), status, new Date().toISOString(), existing.id)
+    .bind(
+      payload.productName || existing.product_name,
+      payload.website || existing.website,
+      payload.title || payload.productName || existing.title,
+      typeof payload.iconPreview === "string" ? payload.iconPreview : existing.icon_preview,
+      payload.email || existing.email,
+      days,
+      total,
+      paypalLink,
+      paid,
+      startAt,
+      endAt,
+      scheduleLabel(startAt, endAt),
+      status,
+      new Date().toISOString(),
+      existing.id,
+    )
     .run();
 
   return handleAdminBookings(request, env);
