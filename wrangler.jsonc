@@ -1,0 +1,22 @@
+{
+  "name": "brandmymac",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-08-28",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "brandmymac",
+      "database_id": "960eb274-0083-4111-b314-d8a12a371d80"
+    }
+  ],
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "destination_address": "sunwei7482@gmail.com"
+    }
+  ],
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  }
+}

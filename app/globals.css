@@ -916,9 +916,54 @@ select:focus {
   gap: 0.85rem;
 }
 
+.schedule-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-message {
+  margin: 0;
+  border: 1px solid rgba(25, 168, 91, 0.18);
+  border-radius: 0.8rem;
+  background: rgba(25, 168, 91, 0.08);
+  color: #167545;
+  font-weight: 800;
+  padding: 0.8rem 1rem;
+}
+
+.price-admin {
+  border: 1px solid rgba(16, 16, 16, 0.1);
+  border-radius: 1rem;
+  background: #ffffff;
+  padding: 1rem;
+}
+
+.price-admin h2 {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.price-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.price-control {
+  gap: 0.35rem;
+}
+
+.price-control span {
+  font-size: 0.8rem;
+}
+
+.price-control input {
+  padding: 0.65rem 0.7rem;
+}
+
 .booking-row {
   display: grid;
-  grid-template-columns: 1.35fr 0.65fr 0.55fr 1fr 1.4fr auto;
+  grid-template-columns: 1.2fr 0.7fr 0.5fr 1fr 0.95fr 1.25fr;
   gap: 1rem;
   align-items: center;
   border: 1px solid rgba(16, 16, 16, 0.09);
@@ -986,6 +1031,33 @@ select:focus {
   padding-inline: 1rem;
 }
 
+.admin-controls {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.admin-controls input {
+  padding: 0.62rem 0.7rem;
+}
+
+.paid-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.paid-toggle input {
+  width: 1rem;
+  aspect-ratio: 1;
+}
+
+.form-error {
+  margin: 0;
+  color: #b4233e;
+  font-size: 0.9rem;
+  font-weight: 760;
+}
+
 @media (max-width: 900px) {
   .intro-grid {
     grid-template-columns: 1fr;
@@ -1014,6 +1086,10 @@ select:focus {
 
   .booking-row {
     grid-template-columns: 1fr;
+  }
+
+  .price-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .faq-list,
@@ -1053,5 +1129,9 @@ select:focus {
   .schedule-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .price-grid {
+    grid-template-columns: 1fr;
   }
 }

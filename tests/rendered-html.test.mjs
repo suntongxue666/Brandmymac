@@ -81,6 +81,25 @@ test("serves visitor stats with sane minimums", async () => {
   assert.ok(stats.visits >= 100);
 });
 
+test("serves slot data and protects admin APIs", async () => {
+  const slotsResponse = await render("/api/slots");
+  assert.equal(slotsResponse.status, 200);
+  const slotsPayload = await slotsResponse.json();
+  assert.equal(slotsPayload.slots.length, 15);
+
+  const desktop7 = slotsPayload.slots.find(
+    (slot) => slot.id === "desk-7",
+  );
+  const desktop10 = slotsPayload.slots.find(
+    (slot) => slot.id === "desk-10",
+  );
+  assert.equal(desktop7.product.name, "Figma");
+  assert.equal(desktop10.product.name, "Raycast");
+
+  const adminResponse = await render("/api/admin/bookings");
+  assert.equal(adminResponse.status, 401);
+});
+
 test("server-renders the schedule page", async () => {
   const response = await render("/schedule");
   assert.equal(response.status, 200);
@@ -90,6 +109,31 @@ test("server-renders the schedule page", async () => {
   assert.match(html, /Manual approval queue/);
   assert.match(html, /Private schedule/);
   assert.match(html, /reserved for BrandMyMac operations/);
+});
+
+test("source wires D1-backed scheduling and admin email", async () => {
+  const [hosting, wrangler, worker, page, schedule] = await Promise.all([
+    readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
+    readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8"),
+    readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/schedule/page.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(hosting, /"d1": "DB"/);
+  assert.match(wrangler, /"database_name": "brandmymac"/);
+  assert.match(wrangler, /960eb274-0083-4111-b314-d8a12a371d80/);
+  assert.match(wrangler, /"send_email"/);
+  assert.match(worker, /sunwei7482@gmail\.com/);
+  assert.match(worker, /brandmymac_bookings/);
+  assert.match(worker, /handleUpdateSlot/);
+  assert.match(page, /fetch\("\/api\/bookings"/);
+  assert.match(page, /id: "desk-7"[\s\S]*name: "Figma"/);
+  assert.match(page, /id: "desk-10"[\s\S]*name: "Raycast"/);
+  assert.match(schedule, /Slot prices/);
+  assert.match(schedule, /Paid/);
+  assert.match(schedule, /Start UTC/);
+  assert.match(schedule, /End UTC/);
 });
 
 test("removes the starter preview surface", async () => {

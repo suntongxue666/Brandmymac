@@ -11,10 +11,12 @@ type Slot = {
   row: "hero" | "standard";
   label: string;
   price: number;
+  nextSchedule?: string;
   product?: {
     name: string;
     url: string;
     schedule: string;
+    iconPreview?: string;
   };
 };
 
@@ -30,47 +32,52 @@ type Booking = {
   days: number;
   price: number;
   total: number;
-  status: "Pending payment";
+  status: "Pending payment" | "Scheduled" | "Active" | "Ended";
+  paid?: boolean;
   paypalLink: string;
   currentSchedule: string;
   requestedSchedule: string;
+  startAt?: string;
+  endAt?: string;
   createdAt: string;
 };
 
-const slots: Slot[] = [
-  {
-    id: "top-1",
-    row: "hero",
-    label: "Prime 1",
-    price: 75,
-    product: {
-      name: "Figma",
-      url: "https://figma.com",
-      schedule: "Aug 28, 2026 to Sep 3, 2026 (UTC)",
-    },
-  },
+const initialSlots: Slot[] = [
+  { id: "top-1", row: "hero", label: "Prime 1", price: 75 },
   { id: "top-2", row: "hero", label: "Prime 2", price: 100 },
-  {
-    id: "top-3",
-    row: "hero",
-    label: "Prime 3",
-    price: 75,
-    product: {
-      name: "Raycast",
-      url: "https://raycast.com",
-      schedule: "Aug 28, 2026 to Sep 3, 2026 (UTC)",
-    },
-  },
+  { id: "top-3", row: "hero", label: "Prime 3", price: 75 },
   { id: "desk-1", row: "standard", label: "Desktop 1", price: 10 },
   { id: "desk-2", row: "standard", label: "Desktop 2", price: 10 },
   { id: "desk-3", row: "standard", label: "Desktop 3", price: 20 },
   { id: "desk-4", row: "standard", label: "Desktop 4", price: 20 },
   { id: "desk-5", row: "standard", label: "Desktop 5", price: 10 },
   { id: "desk-6", row: "standard", label: "Desktop 6", price: 10 },
-  { id: "desk-7", row: "standard", label: "Desktop 7", price: 5 },
+  {
+    id: "desk-7",
+    row: "standard",
+    label: "Desktop 7",
+    price: 5,
+    product: {
+      name: "Figma",
+      url: "https://figma.com",
+      schedule: "Aug 28, 2026 to Sep 3, 2026 (UTC)",
+      iconPreview: "https://www.google.com/s2/favicons?domain=figma.com&sz=128",
+    },
+  },
   { id: "desk-8", row: "standard", label: "Desktop 8", price: 5 },
   { id: "desk-9", row: "standard", label: "Desktop 9", price: 10 },
-  { id: "desk-10", row: "standard", label: "Desktop 10", price: 10 },
+  {
+    id: "desk-10",
+    row: "standard",
+    label: "Desktop 10",
+    price: 10,
+    product: {
+      name: "Raycast",
+      url: "https://raycast.com",
+      schedule: "Aug 28, 2026 to Sep 3, 2026 (UTC)",
+      iconPreview: "https://www.google.com/s2/favicons?domain=raycast.com&sz=128",
+    },
+  },
   { id: "desk-11", row: "standard", label: "Desktop 11", price: 5 },
   { id: "desk-12", row: "standard", label: "Desktop 12", price: 5 },
 ];
@@ -143,6 +150,8 @@ export default function Home() {
   });
   const [submitted, setSubmitted] = useState<Booking | null>(null);
   const [hoveredSlot, setHoveredSlot] = useState<Slot | null>(null);
+  const [slots, setSlots] = useState<Slot[]>(initialSlots);
+  const [submitError, setSubmitError] = useState("");
   const [visitorStats, setVisitorStats] = useState({
     online: 2,
     visits: 100,
@@ -163,6 +172,14 @@ export default function Home() {
 
   useEffect(() => {
     let cancelled = false;
+
+    fetch("/api/slots", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: { slots?: Slot[] } | null) => {
+        if (cancelled || !payload?.slots?.length) return;
+        setSlots(payload.slots);
+      })
+      .catch(() => {});
 
     fetch("/api/stats", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
@@ -186,6 +203,7 @@ export default function Home() {
   function openSlot(slot: Slot) {
     setActiveSlot(slot);
     setSubmitted(null);
+    setSubmitError("");
     setForm({
       productName: "",
       website: "",
@@ -231,7 +249,12 @@ export default function Home() {
           type="button"
         >
           <span className={`demo-icon ${isPrime ? "demo-icon-large" : ""}`}>
-            {slot.product ? <img src={faviconUrl(slot.product.url)} alt="" /> : null}
+            {slot.product ? (
+              <img
+                src={slot.product.iconPreview || faviconUrl(slot.product.url)}
+                alt=""
+              />
+            ) : null}
           </span>
           <span>{slot.product?.name || slot.label}</span>
         </button>
@@ -274,7 +297,7 @@ export default function Home() {
     reader.readAsDataURL(file);
   }
 
-  function submitBooking(event: FormEvent<HTMLFormElement>) {
+  async function submitBooking(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!activeSlot) return;
 
@@ -298,8 +321,37 @@ export default function Home() {
       createdAt: new Date().toISOString(),
     };
 
-    storeBooking(booking);
-    setSubmitted(booking);
+    setSubmitError("");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slotId: booking.slotId,
+          productName: booking.productName,
+          website: booking.website,
+          title: booking.title,
+          iconPreview: booking.iconPreview,
+          email: booking.email,
+          days: booking.days,
+          requestedSchedule: booking.requestedSchedule,
+        }),
+      });
+      const payload = (await response.json()) as {
+        booking?: Booking;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.booking) {
+        throw new Error(payload.error || "Booking could not be submitted.");
+      }
+
+      storeBooking(payload.booking);
+      setSubmitted(payload.booking);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Booking failed.");
+    }
   }
 
   return (
@@ -642,6 +694,7 @@ export default function Home() {
                 <button className="submit-button" type="submit">
                   Submit booking
                 </button>
+                {submitError && <p className="form-error">{submitError}</p>}
               </form>
             )}
           </div>
