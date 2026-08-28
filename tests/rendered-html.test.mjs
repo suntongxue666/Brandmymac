@@ -112,18 +112,19 @@ test("server-renders the schedule page", async () => {
 });
 
 test("source wires D1-backed scheduling and admin email", async () => {
-  const [hosting, wrangler, worker, page, schedule] = await Promise.all([
+  const [hosting, wrangler, viteConfig, worker, page, schedule] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8"),
+    readFile(new URL("../vite.config.ts", import.meta.url), "utf8"),
     readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/schedule/page.tsx", import.meta.url), "utf8"),
   ]);
 
   assert.match(hosting, /"d1": "DB"/);
-  assert.match(wrangler, /"database_name": "brandmymac"/);
-  assert.match(wrangler, /960eb274-0083-4111-b314-d8a12a371d80/);
   assert.match(wrangler, /"send_email"/);
+  assert.match(viteConfig, /BRANDMYMAC_DATABASE_NAME = "brandmymac"/);
+  assert.match(viteConfig, /960eb274-0083-4111-b314-d8a12a371d80/);
   assert.match(worker, /sunwei7482@gmail\.com/);
   assert.match(worker, /brandmymac_bookings/);
   assert.match(worker, /brandmymac_visitors/);
