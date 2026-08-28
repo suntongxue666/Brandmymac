@@ -71,6 +71,27 @@ type BookingRow = {
 
 type BookingStatus = "Pending payment" | "Scheduled" | "Active" | "Ended";
 
+type VisitorInfo = {
+  deviceId: string;
+  ip: string;
+  userAgent: string;
+  country: string;
+  city: string;
+  path: string;
+  now: number;
+};
+
+type VisitorRow = {
+  device_id: string;
+  first_seen: number;
+  last_seen: number;
+  ip: string;
+  user_agent: string;
+  country: string;
+  city: string;
+  visits: number;
+};
+
 const defaultSlots: SlotRow[] = [
   { slot_id: "top-1", label: "Prime 1", row_type: "hero", price: 75, sort_order: 1 },
   { slot_id: "top-2", label: "Prime 2", row_type: "hero", price: 100, sort_order: 2 },
@@ -134,6 +155,27 @@ function cleanupSessions(sessions: Map<string, number>, now: number) {
   }
 }
 
+function getVisitorInfo(request: Request, now: number): VisitorInfo {
+  const url = new URL(request.url);
+  const cf = (request as Request & { cf?: { country?: string; city?: string } }).cf;
+  const deviceId = readCookie(request, COOKIE_NAME) || crypto.randomUUID();
+  const forwardedFor = request.headers.get("x-forwarded-for") || "";
+  const ip =
+    request.headers.get("cf-connecting-ip") ||
+    forwardedFor.split(",")[0]?.trim() ||
+    "";
+
+  return {
+    deviceId,
+    ip,
+    userAgent: request.headers.get("user-agent") || "",
+    country: request.headers.get("cf-ipcountry") || cf?.country || "",
+    city: cf?.city || "",
+    path: url.pathname,
+    now,
+  };
+}
+
 function json(body: unknown, init?: ResponseInit) {
   return Response.json(body, {
     ...init,
@@ -161,7 +203,7 @@ function statsResponse(sessionId: string, visits: number, online: number) {
   );
 }
 
-async function getD1Stats(db: D1Database, sessionId: string, now: number) {
+async function ensureStatsSchema(db: D1Database) {
   await db.batch([
     db.prepare(
       "CREATE TABLE IF NOT EXISTS brandmymac_stats (key TEXT PRIMARY KEY, value INTEGER NOT NULL)",
@@ -169,7 +211,20 @@ async function getD1Stats(db: D1Database, sessionId: string, now: number) {
     db.prepare(
       "CREATE TABLE IF NOT EXISTS brandmymac_sessions (id TEXT PRIMARY KEY, updated_at INTEGER NOT NULL)",
     ),
+    db.prepare(
+      "CREATE TABLE IF NOT EXISTS brandmymac_visitors (device_id TEXT PRIMARY KEY, first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL, ip TEXT NOT NULL, user_agent TEXT NOT NULL, country TEXT NOT NULL, city TEXT NOT NULL, visits INTEGER NOT NULL DEFAULT 1)",
+    ),
+    db.prepare(
+      "CREATE TABLE IF NOT EXISTS brandmymac_visitor_events (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, ip TEXT NOT NULL, user_agent TEXT NOT NULL, country TEXT NOT NULL, city TEXT NOT NULL, path TEXT NOT NULL, created_at INTEGER NOT NULL)",
+    ),
+    db.prepare(
+      "CREATE TABLE IF NOT EXISTS brandmymac_visitor_sessions (device_id TEXT PRIMARY KEY, ip TEXT NOT NULL, user_agent TEXT NOT NULL, country TEXT NOT NULL, city TEXT NOT NULL, updated_at INTEGER NOT NULL)",
+    ),
   ]);
+}
+
+async function getD1Stats(db: D1Database, visitor: VisitorInfo) {
+  await ensureStatsSchema(db);
 
   await db
     .prepare(
@@ -184,23 +239,112 @@ async function getD1Stats(db: D1Database, sessionId: string, now: number) {
     .prepare(
       "INSERT OR REPLACE INTO brandmymac_sessions (id, updated_at) VALUES (?, ?)",
     )
-    .bind(sessionId, now)
+    .bind(visitor.deviceId, visitor.now)
     .run();
   await db
     .prepare("DELETE FROM brandmymac_sessions WHERE updated_at < ?")
-    .bind(now - SESSION_WINDOW_MS)
+    .bind(visitor.now - SESSION_WINDOW_MS)
+    .run();
+  await db
+    .prepare(
+      "INSERT OR IGNORE INTO brandmymac_visitors (device_id, first_seen, last_seen, ip, user_agent, country, city, visits) VALUES (?, ?, ?, ?, ?, ?, ?, 0)",
+    )
+    .bind(
+      visitor.deviceId,
+      visitor.now,
+      visitor.now,
+      visitor.ip,
+      visitor.userAgent,
+      visitor.country,
+      visitor.city,
+    )
+    .run();
+  await db
+    .prepare(
+      "UPDATE brandmymac_visitors SET last_seen = ?, ip = ?, user_agent = ?, country = ?, city = ?, visits = visits + 1 WHERE device_id = ?",
+    )
+    .bind(
+      visitor.now,
+      visitor.ip,
+      visitor.userAgent,
+      visitor.country,
+      visitor.city,
+      visitor.deviceId,
+    )
+    .run();
+  await db
+    .prepare(
+      "INSERT OR REPLACE INTO brandmymac_visitor_sessions (device_id, ip, user_agent, country, city, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+    )
+    .bind(
+      visitor.deviceId,
+      visitor.ip,
+      visitor.userAgent,
+      visitor.country,
+      visitor.city,
+      visitor.now,
+    )
+    .run();
+  await db
+    .prepare("DELETE FROM brandmymac_visitor_sessions WHERE updated_at < ?")
+    .bind(visitor.now - SESSION_WINDOW_MS)
+    .run();
+  await db
+    .prepare(
+      "INSERT INTO brandmymac_visitor_events (id, device_id, ip, user_agent, country, city, path, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .bind(
+      crypto.randomUUID(),
+      visitor.deviceId,
+      visitor.ip,
+      visitor.userAgent,
+      visitor.country,
+      visitor.city,
+      visitor.path,
+      visitor.now,
+    )
     .run();
 
-  const visitRow = await db
-    .prepare("SELECT value FROM brandmymac_stats WHERE key = 'visits'")
-    .first<{ value: number }>();
+  const visitorRow = await db
+    .prepare("SELECT COUNT(*) as count FROM brandmymac_visitors")
+    .first<{ count: number }>();
   const onlineRow = await db
-    .prepare("SELECT COUNT(*) as count FROM brandmymac_sessions")
+    .prepare("SELECT COUNT(*) as count FROM brandmymac_visitor_sessions")
     .first<{ count: number }>();
 
   return {
-    visits: visitRow?.value ?? STARTING_VISITS,
+    visits: Math.max(STARTING_VISITS, (visitorRow?.count ?? 1) + STARTING_VISITS - 1),
     online: onlineRow?.count ?? 2,
+  };
+}
+
+async function getTrafficSummary(db: D1Database) {
+  const now = Date.now();
+  await ensureStatsSchema(db);
+  await db
+    .prepare("DELETE FROM brandmymac_visitor_sessions WHERE updated_at < ?")
+    .bind(now - SESSION_WINDOW_MS)
+    .run();
+
+  const [visitorTotal, onlineTotal, recentVisitors] = await Promise.all([
+    db.prepare("SELECT COUNT(*) as count FROM brandmymac_visitors").first<{ count: number }>(),
+    db
+      .prepare("SELECT COUNT(*) as count FROM brandmymac_visitor_sessions")
+      .first<{ count: number }>(),
+    db
+      .prepare(
+        "SELECT device_id, first_seen, last_seen, ip, user_agent, country, city, visits FROM brandmymac_visitors ORDER BY last_seen DESC LIMIT 12",
+      )
+      .all<VisitorRow>(),
+  ]);
+
+  return {
+    totalVisitors: Math.max(
+      STARTING_VISITS,
+      (visitorTotal?.count ?? 0) + STARTING_VISITS - 1,
+    ),
+    online: Math.max(2, onlineTotal?.count ?? 0),
+    recentVisitors: recentVisitors.results || [],
   };
 }
 
@@ -217,12 +361,12 @@ function getMemoryStats(sessionId: string, now: number) {
 
 async function handleStatsRequest(request: Request, env: Env) {
   const now = Date.now();
-  const sessionId = readCookie(request, COOKIE_NAME) || crypto.randomUUID();
+  const visitor = getVisitorInfo(request, now);
   const stats = env.DB
-    ? await getD1Stats(env.DB, sessionId, now)
-    : getMemoryStats(sessionId, now);
+    ? await getD1Stats(env.DB, visitor)
+    : getMemoryStats(visitor.deviceId, now);
 
-  return statsResponse(sessionId, stats.visits, stats.online);
+  return statsResponse(visitor.deviceId, stats.visits, stats.online);
 }
 
 function isAdmin(request: Request) {
@@ -268,6 +412,7 @@ function slotFromRow(row: SlotRow, booking?: BookingRow) {
             name: booking.product_name,
             url: booking.website,
             schedule: scheduleLabel(booking.start_at, booking.end_at),
+            iconPreview: booking.icon_preview,
           }
         : undefined,
     nextSchedule: booking ? scheduleLabel(booking.start_at, booking.end_at) : undefined,
@@ -353,6 +498,15 @@ async function ensureScheduleSchema(db: D1Database) {
     );
   });
   await db.batch(seedBookingUpdates);
+
+  await db.batch([
+    db.prepare(
+      "UPDATE brandmymac_bookings SET slot_id = 'desk-7', updated_at = ? WHERE product_name = 'Figma' AND website LIKE '%figma%'",
+    ).bind(new Date().toISOString()),
+    db.prepare(
+      "UPDATE brandmymac_bookings SET slot_id = 'desk-10', updated_at = ? WHERE product_name = 'Raycast' AND website LIKE '%raycast%'",
+    ).bind(new Date().toISOString()),
+  ]);
 }
 
 async function refreshBookingStatuses(db: D1Database) {
@@ -534,21 +688,24 @@ async function handleAdminBookings(request: Request, env: Env) {
   if (!isAdmin(request)) return json({ error: "Unauthorized" }, { status: 401 });
   if (!env.DB) return json({ error: "D1 database binding DB is required." }, { status: 503 });
 
+  await ensureStatsSchema(env.DB);
   await ensureScheduleSchema(env.DB);
   await refreshBookingStatuses(env.DB);
 
-  const [slots, bookings] = await Promise.all([
+  const [slots, bookings, traffic] = await Promise.all([
     env.DB
       .prepare("SELECT slot_id, label, row_type, price, sort_order FROM brandmymac_slots ORDER BY sort_order")
       .all<SlotRow>(),
     env.DB
       .prepare("SELECT * FROM brandmymac_bookings ORDER BY created_at DESC")
       .all<BookingRow>(),
+    getTrafficSummary(env.DB),
   ]);
 
   return json({
     slots: slots.results || [],
     bookings: (bookings.results || []).map(bookingFromRow),
+    traffic,
   });
 }
 

@@ -931,6 +931,8 @@ select:focus {
   padding: 0.8rem 1rem;
 }
 
+.traffic-admin,
+.visitor-admin,
 .price-admin {
   border: 1px solid rgba(16, 16, 16, 0.1);
   border-radius: 1rem;
@@ -938,8 +940,40 @@ select:focus {
   padding: 1rem;
 }
 
+.traffic-admin {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 0.3fr)) minmax(260px, 1fr);
+  gap: 1rem;
+  align-items: center;
+}
+
+.traffic-admin div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.traffic-admin span {
+  color: #6b7280;
+  font-size: 0.78rem;
+  font-weight: 780;
+  text-transform: uppercase;
+}
+
+.traffic-admin strong {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.traffic-admin p,
+.price-admin p {
+  margin: 0;
+  color: #555b66;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 .price-admin h2 {
-  margin-bottom: 1rem;
+  margin-bottom: 0.45rem;
   font-size: 1.2rem;
 }
 
@@ -947,6 +981,7 @@ select:focus {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.75rem;
+  margin-top: 1rem;
 }
 
 .price-control {
@@ -960,6 +995,45 @@ select:focus {
 .price-control input {
   padding: 0.65rem 0.7rem;
 }
+
+.visitor-admin h2 {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.visitor-table {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.visitor-table article {
+  min-width: 0;
+  border: 1px solid rgba(16, 16, 16, 0.08);
+  border-radius: 0.8rem;
+  background: #f8f9fc;
+  padding: 0.8rem;
+}
+
+.visitor-table strong,
+.visitor-table p,
+.visitor-table small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visitor-table p {
+  margin: 0.25rem 0;
+  color: #555b66;
+  font-size: 0.8rem;
+}
+
+.visitor-table small {
+  color: #767c87;
+}
+
 
 .booking-row {
   display: grid;
@@ -1090,6 +1164,11 @@ select:focus {
 
   .price-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .traffic-admin,
+  .visitor-table {
+    grid-template-columns: 1fr;
   }
 
   .faq-list,

@@ -173,30 +173,41 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/api/slots", { cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((payload: { slots?: Slot[] } | null) => {
-        if (cancelled || !payload?.slots?.length) return;
-        setSlots(payload.slots);
-      })
-      .catch(() => {});
+    function loadSlots() {
+      fetch("/api/slots", { cache: "no-store" })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((payload: { slots?: Slot[] } | null) => {
+          if (cancelled || !payload?.slots?.length) return;
+          setSlots(payload.slots);
+        })
+        .catch(() => {});
+    }
 
-    fetch("/api/stats", { cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((stats: { online?: number; visits?: number } | null) => {
-        if (cancelled || !stats) return;
-        setVisitorStats({
-          online: Math.max(2, Number(stats.online) || 2),
-          visits: Math.max(100, Number(stats.visits) || 100),
+    function loadStats() {
+      fetch("/api/stats", { cache: "no-store" })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((stats: { online?: number; visits?: number } | null) => {
+          if (cancelled || !stats) return;
+          setVisitorStats({
+            online: Math.max(2, Number(stats.online) || 2),
+            visits: Math.max(100, Number(stats.visits) || 100),
+          });
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setVisitorStats({ online: 2, visits: 100 });
         });
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setVisitorStats({ online: 2, visits: 100 });
-      });
+    }
+
+    loadSlots();
+    loadStats();
+    const slotsInterval = window.setInterval(loadSlots, 60000);
+    const statsInterval = window.setInterval(loadStats, 60000);
 
     return () => {
       cancelled = true;
+      window.clearInterval(slotsInterval);
+      window.clearInterval(statsInterval);
     };
   }, []);
 

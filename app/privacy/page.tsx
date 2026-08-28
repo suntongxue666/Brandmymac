@@ -27,9 +27,10 @@ export default function PrivacyPage() {
             to the submitted request.
           </p>
           <p>
-            Visitor counts and short-lived session cookies may be used to show
-            site activity, including total visits and active visitors. These
-            counters do not identify a person by name or email.
+            Visitor counts, device IDs, IP address, user agent, approximate
+            location headers, and short-lived session cookies may be used to
+            show site activity, including total visitors and active visitors.
+            These records are used for site operations and basic analytics.
           </p>
           <p>
             To ask about submitted data or request a correction, contact

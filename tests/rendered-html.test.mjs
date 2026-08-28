@@ -67,7 +67,7 @@ test("server-renders dedicated legal pages", async () => {
   const privacyHtml = await privacyResponse.text();
   assert.match(privacyHtml, /User Privacy Policy/);
   assert.match(privacyHtml, /Submitted information is not sold/);
-  assert.match(privacyHtml, /Visitor counts and short-lived session cookies/);
+  assert.match(privacyHtml, /device IDs, IP address, user agent/);
 });
 
 test("serves visitor stats with sane minimums", async () => {
@@ -126,11 +126,18 @@ test("source wires D1-backed scheduling and admin email", async () => {
   assert.match(wrangler, /"send_email"/);
   assert.match(worker, /sunwei7482@gmail\.com/);
   assert.match(worker, /brandmymac_bookings/);
+  assert.match(worker, /brandmymac_visitors/);
+  assert.match(worker, /brandmymac_visitor_events/);
+  assert.match(worker, /cf-connecting-ip/);
   assert.match(worker, /handleUpdateSlot/);
   assert.match(page, /fetch\("\/api\/bookings"/);
+  assert.match(page, /setInterval\(loadStats, 60000\)/);
+  assert.match(page, /setInterval\(loadSlots, 60000\)/);
   assert.match(page, /id: "desk-7"[\s\S]*name: "Figma"/);
   assert.match(page, /id: "desk-10"[\s\S]*name: "Raycast"/);
   assert.match(schedule, /Slot prices/);
+  assert.match(schedule, /Existing paid schedules keep their original price/);
+  assert.match(schedule, /Recent visitors/);
   assert.match(schedule, /Paid/);
   assert.match(schedule, /Start UTC/);
   assert.match(schedule, /End UTC/);

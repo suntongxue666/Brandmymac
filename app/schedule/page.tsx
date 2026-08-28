@@ -33,6 +33,23 @@ type SlotPrice = {
   sort_order: number;
 };
 
+type RecentVisitor = {
+  device_id: string;
+  first_seen: number;
+  last_seen: number;
+  ip: string;
+  user_agent: string;
+  country: string;
+  city: string;
+  visits: number;
+};
+
+type Traffic = {
+  totalVisitors: number;
+  online: number;
+  recentVisitors: RecentVisitor[];
+};
+
 const adminToken = "brandmymac-admin";
 
 function toDatetimeLocal(value: string) {
@@ -50,6 +67,7 @@ function fromDatetimeLocal(value: string) {
 export default function SchedulePage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [slots, setSlots] = useState<SlotPrice[]>([]);
+  const [traffic, setTraffic] = useState<Traffic | null>(null);
   const [isAllowed, setIsAllowed] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -62,6 +80,7 @@ export default function SchedulePage() {
     const payload = (await response.json()) as {
       bookings?: Booking[];
       slots?: SlotPrice[];
+      traffic?: Traffic;
       error?: string;
     };
 
@@ -71,9 +90,12 @@ export default function SchedulePage() {
 
     setBookings(payload.bookings || []);
     setSlots(payload.slots || []);
+    setTraffic(payload.traffic || null);
   }
 
   useEffect(() => {
+    let interval: number | undefined;
+
     queueMicrotask(() => {
       const params = new URLSearchParams(window.location.search);
       const allowed = params.get("admin") === adminToken;
@@ -83,7 +105,14 @@ export default function SchedulePage() {
       loadSchedule().catch((error) => {
         setMessage(error instanceof Error ? error.message : "Unable to load schedule.");
       });
+      interval = window.setInterval(() => {
+        loadSchedule().catch(() => {});
+      }, 60000);
     });
+
+    return () => {
+      if (interval) window.clearInterval(interval);
+    };
   }, []);
 
   async function updateSlotPrice(slotId: string, price: number) {
@@ -96,6 +125,7 @@ export default function SchedulePage() {
     const payload = (await response.json()) as {
       bookings?: Booking[];
       slots?: SlotPrice[];
+      traffic?: Traffic;
       error?: string;
     };
 
@@ -106,6 +136,7 @@ export default function SchedulePage() {
 
     setBookings(payload.bookings || []);
     setSlots(payload.slots || []);
+    setTraffic(payload.traffic || null);
     setMessage("Price updated.");
   }
 
@@ -127,6 +158,7 @@ export default function SchedulePage() {
     const payload = (await response.json()) as {
       bookings?: Booking[];
       slots?: SlotPrice[];
+      traffic?: Traffic;
       error?: string;
     };
 
@@ -137,6 +169,7 @@ export default function SchedulePage() {
 
     setBookings(payload.bookings || []);
     setSlots(payload.slots || []);
+    setTraffic(payload.traffic || null);
     setMessage("Schedule updated.");
   }
 
@@ -168,8 +201,27 @@ export default function SchedulePage() {
           <div className="schedule-stack">
             {message && <p className="admin-message">{message}</p>}
 
+            <section className="traffic-admin">
+              <div>
+                <span>Total visitors</span>
+                <strong>{traffic?.totalVisitors.toLocaleString() || "100"}</strong>
+              </div>
+              <div>
+                <span>Online now</span>
+                <strong>{traffic?.online || 2}</strong>
+              </div>
+              <p>
+                New booking requests are saved to D1 and emailed to
+                sunwei7482@gmail.com. This page refreshes every 60 seconds.
+              </p>
+            </section>
+
             <section className="price-admin">
               <h2>Slot prices</h2>
+              <p>
+                Existing paid schedules keep their original price. Updated
+                prices apply to new booking requests only.
+              </p>
               <div className="price-grid">
                 {slots.map((slot) => (
                   <label className="price-control" key={slot.slot_id}>
@@ -195,6 +247,24 @@ export default function SchedulePage() {
                 ))}
               </div>
             </section>
+
+            {traffic?.recentVisitors?.length ? (
+              <section className="visitor-admin">
+                <h2>Recent visitors</h2>
+                <div className="visitor-table">
+                  {traffic.recentVisitors.map((visitor) => (
+                    <article key={visitor.device_id}>
+                      <strong>{visitor.ip || "No IP"}</strong>
+                      <p>{visitor.user_agent || "No user agent"}</p>
+                      <small>
+                        {visitor.device_id.slice(0, 8)} · {visitor.country || "Unknown"} ·{" "}
+                        {visitor.visits} visits
+                      </small>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
             <div className="booking-table">
               {bookings.map((booking) => (
