@@ -141,6 +141,10 @@ test("source wires D1-backed scheduling and admin email", async () => {
   assert.match(page, /slot-name-highlight/);
   assert.match(page, /Price &amp; days:/);
   assert.match(page, /nextAvailableAt/);
+  assert.match(page, /A PayPal Payment request will be sent/);
+  assert.match(page, /Admin working hours are 00:00-16:00 UTC/);
+  assert.match(page, /I understand/);
+  assert.doesNotMatch(page, /Open PayPal link/);
   assert.match(page, /id: "desk-7"[\s\S]*name: "Figma"/);
   assert.match(page, /id: "desk-10"[\s\S]*name: "Raycast"/);
   assert.match(schedule, /Slot prices/);

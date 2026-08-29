@@ -882,6 +882,7 @@ select:focus {
 }
 
 .submit-button,
+.success-panel button,
 .success-panel a,
 .paypal-button {
   border: 0;
@@ -894,7 +895,7 @@ select:focus {
   cursor: pointer;
 }
 
-.success-panel a + a {
+.success-panel a {
   background: #d93456;
 }
 

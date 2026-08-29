@@ -617,12 +617,17 @@ export default function Home() {
                 <p className="eyebrow">Submitted</p>
                 <h2>{submitted.productName} is in the schedule.</h2>
                 <p>
-                  A PayPal request can be sent to {submitted.email}. Once paid,
-                  turn the ad on for the reserved dates.
+                  A PayPal Payment request will be sent to {submitted.email} by
+                  the Admin. Once paid, the ad will be turned on for the
+                  reserved dates.
                 </p>
-                <a href={submitted.paypalLink} target="_blank">
-                  Open PayPal link
-                </a>
+                <p>
+                  The payment link may be delayed because of time zone
+                  differences. Admin working hours are 00:00-16:00 UTC.
+                </p>
+                <button onClick={() => setActiveSlot(null)} type="button">
+                  I understand
+                </button>
                 <Link href="/schedule">View schedule page</Link>
               </div>
             ) : (
