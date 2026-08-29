@@ -799,6 +799,25 @@ async function handleUpdateBooking(request: Request, env: Env) {
   return handleAdminBookings(request, env);
 }
 
+async function handleDeleteBooking(request: Request, env: Env) {
+  if (!isAdmin(request)) return json({ error: "Unauthorized" }, { status: 401 });
+  if (!env.DB) return json({ error: "D1 database binding DB is required." }, { status: 503 });
+
+  await ensureScheduleSchema(env.DB);
+  const payload = (await request.json()) as { id?: string };
+
+  if (!payload.id) {
+    return json({ error: "Booking id is required." }, { status: 400 });
+  }
+
+  await env.DB
+    .prepare("DELETE FROM brandmymac_bookings WHERE id = ?")
+    .bind(payload.id)
+    .run();
+
+  return handleAdminBookings(request, env);
+}
+
 async function runScheduledUpdates(env: Env) {
   if (!env.DB) return;
   await ensureScheduleSchema(env.DB);
@@ -833,6 +852,10 @@ const worker = {
 
     if (url.pathname === "/api/admin/bookings" && request.method === "PATCH") {
       return handleUpdateBooking(request, env);
+    }
+
+    if (url.pathname === "/api/admin/bookings" && request.method === "DELETE") {
+      return handleDeleteBooking(request, env);
     }
 
     if (url.pathname === "/api/admin/bookings") {

@@ -238,6 +238,36 @@ export default function SchedulePage() {
     return true;
   }
 
+  async function deleteBooking(booking: Booking) {
+    const confirmed = window.confirm(
+      `Delete ${booking.productName} from ${booking.slotLabel}?`,
+    );
+    if (!confirmed) return;
+
+    setMessage("");
+    const response = await fetch(`/api/admin/bookings?admin=${adminToken}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: booking.id }),
+    });
+    const payload = (await response.json()) as {
+      bookings?: Booking[];
+      slots?: SlotPrice[];
+      traffic?: Traffic;
+      error?: string;
+    };
+
+    if (!response.ok) {
+      setMessage(payload.error || "Booking delete failed.");
+      return;
+    }
+
+    setBookings(payload.bookings || []);
+    setSlots(payload.slots || []);
+    setTraffic(payload.traffic || null);
+    setMessage("Booking deleted.");
+  }
+
   function openBookingEditor(booking: Booking) {
     setEditingBooking(booking);
     setMessage("");
@@ -368,6 +398,13 @@ export default function SchedulePage() {
                         >
                           Edit
                         </button>
+                        <button
+                          className="delete-button"
+                          onClick={() => deleteBooking(booking)}
+                          type="button"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -429,15 +466,6 @@ export default function SchedulePage() {
                         }
                       />
                     </label>
-                    {booking.paypalLink ? (
-                      <a
-                        className="paypal-button"
-                        href={booking.paypalLink}
-                        target="_blank"
-                      >
-                        Payment link
-                      </a>
-                    ) : null}
                   </div>
                 </article>
               ))}

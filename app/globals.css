@@ -1122,7 +1122,8 @@ select:focus {
   margin-top: 0.5rem;
 }
 
-.edit-button {
+.edit-button,
+.delete-button {
   border: 1px solid rgba(16, 16, 16, 0.14);
   border-radius: 999px;
   background: #ffffff;
@@ -1133,10 +1134,22 @@ select:focus {
   padding: 0.45rem 0.75rem;
 }
 
+.delete-button {
+  border-color: rgba(217, 52, 86, 0.22);
+  color: #d93456;
+}
+
 .edit-button:hover,
 .edit-button:focus-visible {
   border-color: #d93456;
   color: #d93456;
+  outline: none;
+}
+
+.delete-button:hover,
+.delete-button:focus-visible {
+  background: #d93456;
+  color: #ffffff;
   outline: none;
 }
 
