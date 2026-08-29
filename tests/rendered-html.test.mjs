@@ -31,8 +31,12 @@ test("server-renders the BrandMyMac screen marketplace", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>BrandMyMac<\/title>/i);
-  assert.match(html, /Reserve fixed daily placements inside a Mac screen marketplace/i);
+  assert.match(
+    html,
+    /<title>BrandMyMac \| Mac Screen Ads for Founder Tools<\/title>/i,
+  );
+  assert.match(html, /Reserve fixed-price Mac screen placements/i);
+  assert.match(html, /Mac screen ads,fixed price ads,founder tools/i);
   assert.match(html, /Your brand, on my Mac Screen/);
   assert.match(html, /Contextual screen ads with fixed daily pricing/);
   assert.match(
@@ -100,6 +104,22 @@ test("serves slot data and protects admin APIs", async () => {
   assert.equal(adminResponse.status, 401);
 });
 
+test("serves Google crawl files", async () => {
+  const sitemapResponse = await render("/sitemap.xml");
+  assert.equal(sitemapResponse.status, 200);
+  const sitemapXml = await sitemapResponse.text();
+  assert.match(sitemapXml, /<loc>https:\/\/brandmymac\.xyz\/<\/loc>/);
+  assert.match(sitemapXml, /<loc>https:\/\/brandmymac\.xyz\/terms<\/loc>/);
+  assert.match(sitemapXml, /<loc>https:\/\/brandmymac\.xyz\/privacy<\/loc>/);
+  assert.doesNotMatch(sitemapXml, /schedule/);
+
+  const robotsResponse = await render("/robots.txt");
+  assert.equal(robotsResponse.status, 200);
+  const robotsTxt = await robotsResponse.text();
+  assert.match(robotsTxt, /Disallow: \/schedule/);
+  assert.match(robotsTxt, /Sitemap: https:\/\/brandmymac\.xyz\/sitemap\.xml/);
+});
+
 test("server-renders the schedule page", async () => {
   const response = await render("/schedule");
   assert.equal(response.status, 200);
@@ -112,12 +132,13 @@ test("server-renders the schedule page", async () => {
 });
 
 test("source wires D1-backed scheduling and admin email", async () => {
-  const [hosting, wrangler, viteConfig, worker, page, schedule] = await Promise.all([
+  const [hosting, wrangler, viteConfig, worker, page, sitemap, schedule] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8"),
     readFile(new URL("../vite.config.ts", import.meta.url), "utf8"),
     readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/sitemap.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/schedule/page.tsx", import.meta.url), "utf8"),
   ]);
 
@@ -149,6 +170,8 @@ test("source wires D1-backed scheduling and admin email", async () => {
   assert.doesNotMatch(page, /Open PayPal link/);
   assert.match(page, /id: "desk-7"[\s\S]*name: "Figma"/);
   assert.match(page, /id: "desk-10"[\s\S]*name: "Raycast"/);
+  assert.match(sitemap, /https:\/\/brandmymac\.xyz/);
+  assert.doesNotMatch(sitemap, /schedule/);
   assert.match(schedule, /Slot prices/);
   assert.match(schedule, /price-grid-prime/);
   assert.match(schedule, /price-grid-desktop/);
