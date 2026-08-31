@@ -113,7 +113,16 @@ test("serves Google crawl files", async () => {
   assert.match(sitemapXml, /<loc>https:\/\/brandmymac\.xyz\/<\/loc>/);
   assert.match(sitemapXml, /<loc>https:\/\/brandmymac\.xyz\/terms<\/loc>/);
   assert.match(sitemapXml, /<loc>https:\/\/brandmymac\.xyz\/privacy<\/loc>/);
+  assert.match(sitemapXml, /<lastmod>2026-08-31<\/lastmod>/);
   assert.doesNotMatch(sitemapXml, /schedule/);
+  assert.doesNotMatch(sitemapXml, /changefreq|priority/);
+
+  const textSitemapResponse = await render("/sitemap.txt");
+  assert.equal(textSitemapResponse.status, 200);
+  const textSitemap = await textSitemapResponse.text();
+  assert.match(textSitemap, /^https:\/\/brandmymac\.xyz\/$/m);
+  assert.match(textSitemap, /^https:\/\/brandmymac\.xyz\/terms$/m);
+  assert.match(textSitemap, /^https:\/\/brandmymac\.xyz\/privacy$/m);
 
   const robotsResponse = await render("/robots.txt");
   assert.equal(robotsResponse.status, 200);
@@ -140,7 +149,7 @@ test("source wires D1-backed scheduling and admin email", async () => {
     readFile(new URL("../vite.config.ts", import.meta.url), "utf8"),
     readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/sitemap.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/sitemap.xml/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/schedule/page.tsx", import.meta.url), "utf8"),
   ]);
 
@@ -174,7 +183,9 @@ test("source wires D1-backed scheduling and admin email", async () => {
   assert.match(page, /id: "desk-10"[\s\S]*name: "Raycast"/);
   assert.match(page, /slot-price/);
   assert.match(page, /hero-section/);
+  assert.match(page, /<strong className="slot-price">/);
   assert.match(sitemap, /https:\/\/brandmymac\.xyz/);
+  assert.match(sitemap, /2026-08-31/);
   assert.doesNotMatch(sitemap, /schedule/);
   assert.match(schedule, /Slot prices/);
   assert.match(schedule, /price-grid-prime/);

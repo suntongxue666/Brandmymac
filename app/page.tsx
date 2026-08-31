@@ -291,12 +291,11 @@ export default function Home() {
                 src={slot.product.iconPreview || faviconUrl(slot.product.url)}
                 alt=""
               />
-            ) : null}
+            ) : (
+              <strong className="slot-price">${slot.price}/day</strong>
+            )}
           </span>
           <span>{slot.product?.name || slot.label}</span>
-          {!slot.product ? (
-            <strong className="slot-price">${slot.price}/day</strong>
-          ) : null}
         </button>
         <button
           className="reserve-badge"

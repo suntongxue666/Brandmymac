@@ -383,18 +383,14 @@ h2 {
   white-space: nowrap;
 }
 
-.ad-slot .slot-price {
-  display: none;
+.demo-icon .slot-price {
+  display: block;
   color: rgba(0, 0, 0, 0.5);
-  font-size: clamp(0.42rem, 0.78vw, 0.68rem);
+  font-size: clamp(0.4rem, 0.8vw, 0.72rem);
   font-weight: 860;
   line-height: 1;
   text-shadow: none;
   white-space: nowrap;
-}
-
-.ad-slot.is-empty .slot-price {
-  display: block;
 }
 
 .ad-slot-prime {
@@ -1228,8 +1224,7 @@ select:focus {
     display: none;
   }
 
-  .ad-slot .slot-price {
-    display: block;
+  .demo-icon .slot-price {
     font-size: clamp(0.42rem, 1.6vw, 0.58rem);
   }
 
@@ -1260,6 +1255,10 @@ select:focus {
 @media (max-width: 640px) {
   .main-nav {
     display: none;
+  }
+
+  .live-stats span:first-child {
+    transform: translateY(0.45rem);
   }
 
   .main-nav a,
