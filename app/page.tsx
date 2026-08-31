@@ -294,6 +294,9 @@ export default function Home() {
             ) : null}
           </span>
           <span>{slot.product?.name || slot.label}</span>
+          {!slot.product ? (
+            <strong className="slot-price">${slot.price}/day</strong>
+          ) : null}
         </button>
         <button
           className="reserve-badge"
@@ -395,7 +398,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#f6f7fb] text-[#101010]">
-      <section className="mx-auto flex min-h-screen w-full max-w-[1500px] flex-col px-4 pb-5 pt-20 sm:px-8 lg:px-10">
+      <section className="hero-section mx-auto flex min-h-screen w-full max-w-[1500px] flex-col px-4 pb-5 pt-20 sm:px-8 lg:px-10">
         <header className="site-header">
           <Link className="brand-mark" href="/">
             <span className="brand-device">

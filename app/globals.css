@@ -383,8 +383,18 @@ h2 {
   white-space: nowrap;
 }
 
-.ad-slot strong {
+.ad-slot .slot-price {
   display: none;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: clamp(0.42rem, 0.78vw, 0.68rem);
+  font-weight: 860;
+  line-height: 1;
+  text-shadow: none;
+  white-space: nowrap;
+}
+
+.ad-slot.is-empty .slot-price {
+  display: block;
 }
 
 .ad-slot-prime {
@@ -1214,9 +1224,13 @@ select:focus {
     border-radius: 0.85rem;
   }
 
-  .ad-slot span:not(.demo-icon),
-  .ad-slot strong {
+  .ad-slot span:not(.demo-icon) {
     display: none;
+  }
+
+  .ad-slot .slot-price {
+    display: block;
+    font-size: clamp(0.42rem, 1.6vw, 0.58rem);
   }
 
   .booking-row {
@@ -1245,8 +1259,7 @@ select:focus {
 
 @media (max-width: 640px) {
   .main-nav {
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    display: none;
   }
 
   .main-nav a,
@@ -1265,6 +1278,24 @@ select:focus {
   .mac-stage {
     width: 138%;
     margin-left: -19%;
+  }
+
+  .hero-section {
+    min-height: auto;
+    padding-bottom: 0.2rem;
+  }
+
+  #how-it-works {
+    padding-top: clamp(0.7rem, 2vw, 1.2rem);
+  }
+
+  .step-grid,
+  .machine-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .machine-layout {
+    gap: 1rem;
   }
 
   .schedule-header {

@@ -46,6 +46,8 @@ test("server-renders the BrandMyMac screen marketplace", async () => {
   assert.match(html, /Figma/);
   assert.match(html, /Raycast/);
   assert.match(html, /Prime 2/);
+  assert.match(html, /class="slot-price"/);
+  assert.match(html, /100<!-- -->\/day/);
   assert.match(html, /Desktop 12/);
   assert.match(html, /hover an empty slot to see placement terms/);
   assert.match(html, /Reserve/);
@@ -170,6 +172,8 @@ test("source wires D1-backed scheduling and admin email", async () => {
   assert.doesNotMatch(page, /Open PayPal link/);
   assert.match(page, /id: "desk-7"[\s\S]*name: "Figma"/);
   assert.match(page, /id: "desk-10"[\s\S]*name: "Raycast"/);
+  assert.match(page, /slot-price/);
+  assert.match(page, /hero-section/);
   assert.match(sitemap, /https:\/\/brandmymac\.xyz/);
   assert.doesNotMatch(sitemap, /schedule/);
   assert.match(schedule, /Slot prices/);
